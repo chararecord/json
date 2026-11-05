@@ -447,12 +447,14 @@ kbd{font:600 12px var(--mono);padding:1px 6px;border:1px solid var(--line2);bord
 .privacy li::before{content:"";position:absolute;left:2px;top:.65em;width:5px;height:5px;border-radius:50%;background:var(--acc)}
 .privacy b{color:var(--text);font-weight:600}
 .privacy a{color:var(--acc);text-underline-offset:3px}
+.top .brand{cursor:pointer;border-radius:8px;padding:2px 6px 2px 2px}
+.top .brand:hover .logo{filter:brightness(1.15)}
 </style>
 </head>
 <body>
 
 <header class="top">
-  <span class="brand"><span class="logo" aria-hidden="true">{ }</span><b>제이슨</b></span>
+  <button class="brand" id="home" title="처음 화면으로" aria-label="처음 화면으로"><span class="logo" aria-hidden="true">{ }</span><b>제이슨</b></button>
   <nav class="views" id="views" aria-label="보는 방식"></nav>
   <span class="sp"></span>
   <span class="find"><input type="search" id="q" class="ctl" placeholder="검색: 키, 값, 코드 이름" aria-label="검색"><span id="hits"></span></span>
@@ -890,6 +892,7 @@ function renderViews(){
   const b=([k,l,t])=>`<button class="vl ${menu===k?"on":""}" data-view="${k}" title="${esc(t)}" aria-pressed="${menu===k}">${l}${scan&&viewNum(k)?`<i>${esc(viewNum(k))}</i>`:""}</button>`;
   $("#views").innerHTML=`<span class="seg">${VIEWS.map(b).join("")}</span>`+(scan?`<span class="vgrp"><span>FHIR</span><span class="seg">${FHIRV.map(b).join("")}</span></span>`:"");
 }
+$("#home").onclick=goHome;
 $("#views").addEventListener("click",e=>{const b=e.target.closest("[data-view]");if(!b)return;menu=b.dataset.view;render();$("#view").scrollTop=0});
 // 환자(FHIR) 또는 파일 목록. 이름 검색 칸이 있는 목록으로 고른다
 // 환자를 고르는 화면(환자, 리소스)에서만 환자 목록, 나머지 화면은 파일 목록
@@ -935,6 +938,8 @@ function ptView(){
   return body;
 }
 let isEx=false;
+// 로고를 누르면 열어 둔 파일을 모두 닫고 처음 화면으로 돌아간다
+function goHome(){files=[];scan=null;data=undefined;fx=null;isEx=false;loaded=-1;q="";$("#q").value="";menu="table";mode="tl";checkOpen={};resSel=null;resHist=[];$("#side").dataset.k="";$("#pdrop").hidden=true;setMeta([]);render();$("#view").scrollTop=0}
 const exNote=()=>isEx?`<p class="exnote">예시 데이터를 보고 있다. 내 파일은 위 「파일 열기」로 연다.</p>`:"";
 const welcomeHtml=()=>`<div class="home"><div class="home-l">
   <span class="logo big" aria-hidden="true">{ }</span>
