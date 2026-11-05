@@ -8,17 +8,17 @@
 <style>
 /* 레이아웃: 머리 → 입력 → 보는 방식 라벨(원문, 트리, 표, 경로 + FHIR일 때 점검, 표 만들기, 리소스, 환자) → 내용. 기획서 양식과 같은 회백 바탕, 강조는 남색 하나 */
 :root{
-  --bg:#fafaf9; --bg2:#ffffff; --line:#e6e6e3; --line2:#d2d2ce; --text:#191c1f; --dim:#4b5158; --faint:#666b73; --acc:#1e3a8a; --acc-soft:#e9edf7; --head:#f1f1ef;
-  --key:#1e3a8a; --str:#2f6b45; --num:#a84a08; --bool:#6b3fa0; --null:#7a8089; --sel:#f1f1ef; --hl:#fff1bd; --red:#b42318;
+  --bg:#fafaf9; --bg2:#ffffff; --line:#e6e6e3; --line2:#d2d2ce; --text:#191c1f; --dim:#3f454c; --faint:#5c6169; --acc:#1e3a8a; --acc-soft:#e9edf7; --head:#f1f1ef;
+  --key:#0550ae; --str:#a24a00; --num:#7c3aed; --bool:#0e7490; --null:#5f6670; --ok:#1a7f37; --sel:#f1f1ef; --hl:#fff1bd; --red:#b42318;
   --body:Pretendard,"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
   --mono:"SF Mono",Menlo,ui-monospace,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
-  --bg:#141517; --bg2:#1c1d20; --line:#2b2d31; --line2:#3a3d42; --text:#ebebe9; --dim:#b4b7bc; --faint:#969aa1; --acc:#c4f135; --acc-soft:#2a3314; --head:#232528;
-  --key:#9db4ff; --str:#8fd19e; --num:#ffb55c; --bool:#d4a5ff; --null:#80858c; --sel:#232528; --hl:#4a3f12; --red:#ff8a80;}}
+  --bg:#141517; --bg2:#1c1d20; --line:#2b2d31; --line2:#3a3d42; --text:#ececea; --dim:#c4c7cc; --faint:#a3a7ad; --acc:#c4f135; --acc-soft:#2a3314; --head:#232528;
+  --key:#79c0ff; --str:#ffa657; --num:#d2a8ff; --bool:#56d4dd; --null:#9da5b0; --ok:#7ee787; --sel:#232528; --hl:#4a3f12; --red:#ff8a80;}}
 :root[data-theme="dark"]{color-scheme:dark;
-  --bg:#141517; --bg2:#1c1d20; --line:#2b2d31; --line2:#3a3d42; --text:#ebebe9; --dim:#b4b7bc; --faint:#969aa1; --acc:#c4f135; --acc-soft:#2a3314; --head:#232528;
-  --key:#9db4ff; --str:#8fd19e; --num:#ffb55c; --bool:#d4a5ff; --null:#80858c; --sel:#232528; --hl:#4a3f12; --red:#ff8a80;}
+  --bg:#141517; --bg2:#1c1d20; --line:#2b2d31; --line2:#3a3d42; --text:#ececea; --dim:#c4c7cc; --faint:#a3a7ad; --acc:#c4f135; --acc-soft:#2a3314; --head:#232528;
+  --key:#79c0ff; --str:#ffa657; --num:#d2a8ff; --bool:#56d4dd; --null:#9da5b0; --ok:#7ee787; --sel:#232528; --hl:#4a3f12; --red:#ff8a80;}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{height:100%}
@@ -176,7 +176,6 @@ details>summary::-webkit-details-marker{display:none}
 .inf{font-size:10.5px;color:var(--dim);border:1px dashed var(--line2);border-radius:3px;padding:0 4px;margin-left:8px;white-space:nowrap}
 .t-Condition{color:var(--bool)}
 .t-Observation{color:var(--num)}
-.t-Procedure{color:var(--str)}
 .t-MedicationRequest,.t-MedicationAdministration,.t-Immunization{color:var(--key)}
 .t-Encounter{color:var(--text)}
 .raw{margin:2px 0 8px 64px;padding:6px 8px;border-left:1px solid var(--line2);background:var(--bg2)}
@@ -376,7 +375,7 @@ body.over::after{content:"여기에 놓으면 연다";position:fixed;inset:12px;
 .fold span{color:var(--dim);font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fold .ar{margin-left:auto;color:var(--faint);flex:none}
 .inb{padding:6px 4px 0}
-.okline{color:var(--str);font-size:13px}
+.okline{color:var(--ok);font-size:13px}
 .missbox{border:1px solid var(--red);border-radius:6px;padding:10px 14px;background:color-mix(in srgb,var(--red) 6%,var(--bg2));color:var(--red)}
 .missbox ul{margin:6px 0 0;padding-left:18px;color:var(--text)}
 .rawbox{margin-top:8px;border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:var(--bg)}
@@ -430,7 +429,7 @@ kbd{font:600 12px var(--mono);padding:1px 6px;border:1px solid var(--line2);bord
 .h-hint{margin-top:12px;color:var(--faint);font-size:12.5px}
 .h-badges{margin-top:26px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .h-bd{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg2);font-size:13px;font-weight:600}
-.h-bd i{flex:none;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:color-mix(in srgb,var(--str) 14%,var(--bg2));color:var(--str);font-style:normal;font-size:11px}
+.h-bd i{flex:none;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:color-mix(in srgb,var(--ok) 14%,var(--bg2));color:var(--ok);font-style:normal;font-size:11px}
 .h-more{margin-top:8px;font-size:12.5px;color:var(--faint)}
 .h-more summary{cursor:pointer;color:var(--acc);list-style:none;width:max-content}
 .h-more summary::-webkit-details-marker{display:none}
