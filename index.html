@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>제이슨</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22%231e3a8a%22/%3E%3Ctext%20x%3D%2216%22%20y%3D%2222%22%20text-anchor%3D%22middle%22%20font-family%3D%22Menlo%2Cmonospace%22%20font-size%3D%2216%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%3E%7B%20%7D%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap">
 <style>
 /* 레이아웃: 머리 → 입력 → 보는 방식 라벨(원문, 트리, 표, 경로 + FHIR일 때 점검, 표 만들기, 리소스, 환자) → 내용. 기획서 양식과 같은 회백 바탕, 강조는 남색 하나 */
 :root{
@@ -440,6 +439,14 @@ kbd{font:600 12px var(--mono);padding:1px 6px;border:1px solid var(--line2);bord
 .exlink{align-self:flex-start;color:var(--acc);font-size:13px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
 @media(max-width:900px){.home{grid-template-columns:minmax(0,1fr);padding-top:24px}.mini{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:560px){.home-r{grid-template-columns:minmax(0,1fr)}}
+/* 첫 화면: 올린 파일 처리 설명 */
+.privacy{margin-top:26px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--bg2)}
+.privacy h3{font-size:13px;font-weight:700;margin:0 0 8px}
+.privacy ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--dim)}
+.privacy li{padding-left:14px;position:relative}
+.privacy li::before{content:"";position:absolute;left:2px;top:.65em;width:5px;height:5px;border-radius:50%;background:var(--acc)}
+.privacy b{color:var(--text);font-weight:600}
+.privacy a{color:var(--acc);text-underline-offset:3px}
 </style>
 </head>
 <body>
@@ -935,6 +942,14 @@ const welcomeHtml=()=>`<div class="home"><div class="home-l">
   <p>트리, 표, 경로로 바꿔 보고, FHIR Bundle이면 환자와 리소스 단위로 묶어서 보여 준다. 파일은 이 브라우저 밖으로 나가지 않는다.</p>
   <div class="home-row"><label class="btn pri lg">파일 열기<input type="file" multiple hidden data-open-file accept=".json,.jsonl,.ndjson,.txt,application/json"></label><button class="btn lg" data-example="json">예시로 보기</button></div>
   <div class="home-hint"><span>파일을 이 창에 끌어다 놓아도 된다. 여러 파일을 한 번에 열 수 있다.</span><span><kbd>⌘</kbd> <kbd>V</kbd> 로 붙여 넣어도 된다. 윈도우는 <kbd>Ctrl</kbd> <kbd>V</kbd>.</span></div>
+  <section class="privacy" aria-labelledby="pvh"><h3 id="pvh">올린 파일 처리</h3><ul>
+    <li><b>파일은 이 브라우저 안에서만 읽는다.</b> 서버로 보내지 않는다. 붙여 넣은 내용도 같다.</li>
+    <li><b>파일 내용은 저장하지 않는다.</b> 탭을 닫거나 새로고침하면 사라진다.</li>
+    <li>브라우저에 남기는 것은 설정 두 가지뿐이다. 밝게, 어둡게 테마와 한 번에 보여 줄 개수다.</li>
+    <li>바깥과 주고받는 것은 이 페이지를 처음 받을 때 한 번뿐이다. 글꼴, 분석 도구, 광고를 따로 불러오지 않는다. 쿠키도 쓰지 않는다.</li>
+    <li>환자 기록처럼 민감한 파일을 열어도 이 컴퓨터 밖으로 나가지 않는다.</li>
+    <li>직접 확인할 수 있다. 코드는 <a href="https://github.com/chararecord/json" target="_blank" rel="noopener">github.com/chararecord/json</a> 에 공개되어 있다. 브라우저 개발자 도구의 네트워크 탭을 연 채로 파일을 열어 보면 요청이 하나도 생기지 않는다.</li>
+  </ul></section>
 </div><div class="home-r">
   <div class="vc"><b>트리</b><span>접고 펼치며 본다</span><pre>▾ <span class="k">totals</span> {11}
     <span class="k">sessions</span> : <span class="v">7</span>
