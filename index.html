@@ -14,10 +14,10 @@
   --mono:"SF Mono",Menlo,ui-monospace,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
-  --bg:#141517; --bg2:#1c1d20; --line:#2b2d31; --line2:#3a3d42; --text:#ebebe9; --dim:#b4b7bc; --faint:#969aa1; --acc:#9db4ff; --acc-soft:#1f2740; --head:#232528;
+  --bg:#141517; --bg2:#1c1d20; --line:#2b2d31; --line2:#3a3d42; --text:#ebebe9; --dim:#b4b7bc; --faint:#969aa1; --acc:#c4f135; --acc-soft:#2a3314; --head:#232528;
   --key:#9db4ff; --str:#8fd19e; --num:#ffb55c; --bool:#d4a5ff; --null:#80858c; --sel:#232528; --hl:#4a3f12; --red:#ff8a80;}}
 :root[data-theme="dark"]{color-scheme:dark;
-  --bg:#141517; --bg2:#1c1d20; --line:#2b2d31; --line2:#3a3d42; --text:#ebebe9; --dim:#b4b7bc; --faint:#969aa1; --acc:#9db4ff; --acc-soft:#1f2740; --head:#232528;
+  --bg:#141517; --bg2:#1c1d20; --line:#2b2d31; --line2:#3a3d42; --text:#ebebe9; --dim:#b4b7bc; --faint:#969aa1; --acc:#c4f135; --acc-soft:#2a3314; --head:#232528;
   --key:#9db4ff; --str:#8fd19e; --num:#ffb55c; --bool:#d4a5ff; --null:#80858c; --sel:#232528; --hl:#4a3f12; --red:#ff8a80;}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -417,38 +417,54 @@ body.over::after{content:"여기에 놓으면 연다";position:fixed;inset:12px;
 /* 로고: 남색 네모 안의 흰 중괄호 */
 .top .brand{display:inline-flex;align-items:center;gap:8px;font-size:16px;font-weight:700;margin-right:4px}
 .logo{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:7px;background:var(--acc);color:var(--bg2);font:700 13px/1 var(--mono);letter-spacing:-.04em}
-/* 첫 화면 (시안 B): 왼쪽 소개와 버튼, 오른쪽 보는 방식 카드 */
-.home{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:40px;padding:40px 24px 24px;max-width:1180px;margin:0 auto;align-items:start}
-.logo.big{width:64px;height:64px;border-radius:16px;font-size:26px}
-.home-l h2{font-size:28px;line-height:1.3;margin:18px 0 10px;letter-spacing:-.02em;text-wrap:balance}
-.home-l p{margin:0 0 22px;color:var(--dim)}
-.home-row{display:flex;gap:10px;flex-wrap:wrap}
-.btn.lg{height:44px;padding:0 22px;font-size:15px;border-radius:8px}
-.home-hint{margin-top:16px;color:var(--faint);font-size:13px;display:flex;flex-direction:column;gap:6px}
-kbd{font:600 12px var(--mono);padding:1px 6px;border:1px solid var(--line2);border-bottom-width:2px;border-radius:4px;background:var(--bg2);color:var(--dim)}
-.home-r{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.vc{border:1px solid var(--line);border-radius:10px;background:var(--bg2);padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
-.vc b{font-size:14px}.vc>span{font-size:12.5px;color:var(--dim)}
-.vc pre{margin:0;padding:8px 10px;border-radius:6px;background:var(--bg);font:11.5px/1.6 var(--mono);color:var(--dim);overflow:hidden;height:74px}
-.vc pre .k{color:var(--key)}.vc pre .s{color:var(--str)}.vc pre .v{color:var(--num)}
-.vc.fhir{grid-column:1/-1;border-color:color-mix(in srgb,var(--acc) 35%,var(--line))}
-.vc.fhir .t{font-size:12px;font-weight:700;color:var(--acc)}
-.mini{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.mini div{padding:6px 10px;border-radius:6px;background:var(--bg);font-size:12px;color:var(--dim)}
-.mini b{display:block;font-size:12.5px;color:var(--text)}
-.exlink{align-self:flex-start;color:var(--acc);font-size:13px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
-@media(max-width:900px){.home{grid-template-columns:minmax(0,1fr);padding-top:24px}.mini{grid-template-columns:minmax(0,1fr)}}
-@media(max-width:560px){.home-r{grid-template-columns:minmax(0,1fr)}}
-/* 첫 화면: 올린 파일 처리 설명 */
-.privacy{margin-top:26px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--bg2)}
-.privacy h3{font-size:13px;font-weight:700;margin:0 0 8px}
-.privacy ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--dim)}
-.privacy li{padding-left:14px;position:relative}
-.privacy li::before{content:"";position:absolute;left:2px;top:.65em;width:5px;height:5px;border-radius:50%;background:var(--acc)}
-.privacy b{color:var(--text);font-weight:600}
-.privacy a{color:var(--acc);text-underline-offset:3px}
 .top .brand{cursor:pointer;border-radius:8px;padding:2px 6px 2px 2px}
 .top .brand:hover .logo{filter:brightness(1.15)}
+/* 첫 화면: 왼쪽 소개와 배지, 오른쪽 전후 비교 미리보기 */
+.logo.big{width:56px;height:56px;border-radius:14px;font-size:22px}
+.btn.lg{height:44px;padding:0 22px;font-size:15px;border-radius:8px}
+kbd{font:600 12px var(--mono);padding:1px 6px;border:1px solid var(--line2);border-bottom-width:2px;border-radius:4px;background:var(--bg2);color:var(--dim)}
+.h-wrap{display:grid;grid-template-columns:minmax(0,400px) minmax(0,1fr);gap:44px;padding:44px 28px 32px;max-width:1200px;margin:0 auto;align-items:start}
+.h-l h2{font-size:30px;line-height:1.25;margin:16px 0 8px;letter-spacing:-.02em;text-wrap:balance}
+.h-sub{margin:0 0 22px;color:var(--dim);font-size:15px}
+.h-row{display:flex;gap:10px;flex-wrap:wrap}
+.h-hint{margin-top:12px;color:var(--faint);font-size:12.5px}
+.h-badges{margin-top:26px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.h-bd{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg2);font-size:13px;font-weight:600}
+.h-bd i{flex:none;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:color-mix(in srgb,var(--str) 14%,var(--bg2));color:var(--str);font-style:normal;font-size:11px}
+.h-more{margin-top:8px;font-size:12.5px;color:var(--faint)}
+.h-more summary{cursor:pointer;color:var(--acc);list-style:none;width:max-content}
+.h-more summary::-webkit-details-marker{display:none}
+.h-more p{margin:6px 0 0;line-height:1.6;color:var(--dim)}
+.h-demo{border:1px solid var(--line);border-radius:12px;background:var(--bg2);overflow:hidden}
+.h-dh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--line)}
+.h-seg{display:inline-flex;gap:2px;padding:3px;border-radius:8px;background:var(--head);flex-wrap:wrap}
+.h-seg button{height:28px;padding:0 13px;border-radius:5px;color:var(--dim);font-size:13px}
+.h-seg button.on{background:var(--bg2);color:var(--acc);font-weight:600;box-shadow:0 0 0 1px var(--line)}
+.h-seg button.h-rawtab.on{color:var(--red)}
+.h-cap{margin-left:auto;font-size:12px;color:var(--faint)}
+.h-db{height:268px;padding:14px 16px;font:12.5px/1.75 var(--mono);color:var(--dim);overflow:hidden}
+.h-db pre{margin:0;font:inherit}
+.h-db .hk{color:var(--key)}.h-db .hs{color:var(--str)}.h-db .hv{color:var(--num)}.h-db .hf{color:var(--faint)}
+.h-wall{word-break:break-all;color:var(--faint);font-size:12px;line-height:1.55}
+.h-db table{border-collapse:collapse;font:12.5px var(--body);width:100%}
+.h-db th,.h-db td{padding:5px 10px;border-bottom:1px solid var(--line);text-align:left}
+.h-db th{color:var(--faint);font-weight:500;background:var(--bg)}
+.h-db td.r{text-align:right;font-variant-numeric:tabular-nums;background-image:linear-gradient(90deg,color-mix(in srgb,var(--acc) 16%,transparent) var(--p),transparent var(--p));background-repeat:no-repeat;background-size:calc(100% - 8px) 60%;background-position:4px center}
+.h-fx{font:13px/1.5 var(--body);color:var(--text)}
+.h-fxh{display:flex;gap:12px;align-items:baseline;margin-bottom:10px}.h-fxh b{font-size:15px}.h-fxh span{color:var(--faint);font-size:12.5px}
+.h-fxg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.h-fxg>div{border:1px solid var(--line);border-radius:6px;padding:7px 10px;font-size:12.5px;color:var(--dim)}
+.h-fxg i{display:block;font-style:normal;font-size:11.5px;color:var(--faint);margin-bottom:2px}.h-fxg b{color:var(--text)}
+.h-fxy{font-weight:700;font-size:13px;border-bottom:1px solid var(--line);padding-bottom:3px;margin:6px 0}
+.h-fxe{display:flex;gap:10px;align-items:baseline;padding:6px 10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;font-size:12.5px}
+.h-fxe span{color:var(--faint)}.h-fxe .t{background:var(--head);color:var(--dim);border-radius:4px;padding:0 6px;font-size:11.5px}.h-fxe .t.em{color:var(--red)}.h-fxe .c{margin-left:auto}
+.h-df{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--dim);background:var(--bg)}
+.h-df button{margin-left:auto;color:var(--acc);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.h-chips{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+.h-chip{display:inline-flex;align-items:baseline;gap:6px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--bg2);font-size:12.5px;color:var(--dim)}
+.h-chip b{color:var(--text);font-size:13px}
+@media(max-width:900px){.h-wrap{grid-template-columns:minmax(0,1fr);padding-top:24px}}
+@media(max-width:560px){.h-badges{grid-template-columns:1fr}.h-fxg{grid-template-columns:1fr}.h-db{height:auto;min-height:220px}}
 </style>
 </head>
 <body>
@@ -939,38 +955,53 @@ function ptView(){
 }
 let isEx=false;
 // 로고를 누르면 열어 둔 파일을 모두 닫고 처음 화면으로 돌아간다
-function goHome(){files=[];scan=null;data=undefined;fx=null;isEx=false;loaded=-1;q="";$("#q").value="";menu="table";mode="tl";checkOpen={};resSel=null;resHist=[];$("#side").dataset.k="";$("#pdrop").hidden=true;setMeta([]);render();$("#view").scrollTop=0}
+function goHome(){hdemo="raw";files=[];scan=null;data=undefined;fx=null;isEx=false;loaded=-1;q="";$("#q").value="";menu="table";mode="tl";checkOpen={};resSel=null;resHist=[];$("#side").dataset.k="";$("#pdrop").hidden=true;setMeta([]);render();$("#view").scrollTop=0}
 const exNote=()=>isEx?`<p class="exnote">예시 데이터를 보고 있다. 내 파일은 위 「파일 열기」로 연다.</p>`:"";
-const welcomeHtml=()=>`<div class="home"><div class="home-l">
+// 첫 화면: 왼쪽 제목, 한 줄 소개, 버튼, 배지. 오른쪽 전후 비교 미리보기와 칩
+const HDEMO={
+ raw:{cap:"그대로 열면 이렇다",h:`<div class="h-wall">{"schema":"agent-log/v1","totals":{"sessions":7,"subagents":6,"model_turns":2161,"new_tokens":22704259},"sessions":[{"session_id":"6cadfe20","title":"문서 작업","turns":696,"tool_calls":397,"top_tools":[["Bash",164],["Artifact",59]]},{"session_id":"d7ea8d6c","title":"아이디어 정리","turns":569,"tool_calls":257,"top_tools":[["Read",88]]},{"session_id":"b8e3d0eb","title":"설계 검토","turns":77,"tool_calls":34,"top_tools":[["Bash",40]]}],"hours":{"2026-10-28 09":{"new_tokens":302553,"cache_read":3251371},"2026-10-28 10":{"new_tokens":118020,"cache_read":2210388}},"repos":[],"manual":{"role":"","notes":""}}</div>`},
+ tree:{cap:"접고 펼치며 본다",h:`<pre>▾ {6}
+    <span class="hk">schema</span> : <span class="hs">"agent-log/v1"</span>
+  ▾ <span class="hk">totals</span> {4}
+      <span class="hk">sessions</span> : <span class="hv">7</span>
+      <span class="hk">model_turns</span> : <span class="hv">2,161</span>
+      <span class="hk">new_tokens</span> : <span class="hv">22,704,259</span>
+  ▸ <span class="hk">sessions</span> [3] <span class="hf">표 3×5</span>
+  ▸ <span class="hk">hours</span> {2}</pre>`},
+ table:{cap:"같은 모양의 묶음은 표로",h:`<table><thead><tr><th>#</th><th>title</th><th class="r">turns</th><th class="r">tool_calls</th><th>top_tools</th></tr></thead><tbody>
+<tr><td>0</td><td>문서 작업</td><td class="r" style="--p:100%">696</td><td class="r" style="--p:100%">397</td><td>[2] Bash 164, Artifact 59</td></tr>
+<tr><td>1</td><td>아이디어 정리</td><td class="r" style="--p:82%">569</td><td class="r" style="--p:65%">257</td><td>[1] Read 88</td></tr>
+<tr><td>2</td><td>설계 검토</td><td class="r" style="--p:11%">77</td><td class="r" style="--p:9%">34</td><td>[1] Bash 40</td></tr></tbody></table>`},
+ path:{cap:"모든 값을 경로와 함께",h:`<pre><span class="hk">$.schema</span>                      <span class="hs">"agent-log/v1"</span>
+<span class="hk">$.totals.sessions</span>             <span class="hv">7</span>
+<span class="hk">$.totals.model_turns</span>          <span class="hv">2161</span>
+<span class="hk">$.sessions[0].title</span>           <span class="hs">"문서 작업"</span>
+<span class="hk">$.sessions[0].turns</span>           <span class="hv">696</span>
+<span class="hk">$.sessions[0].top_tools[0][0]</span> <span class="hs">"Bash"</span>
+<span class="hk">$.sessions[1].title</span>           <span class="hs">"아이디어 정리"</span></pre>`},
+ fhir:{cap:"FHIR Bundle을 열면 환자 단위로",h:`<div class="h-fx"><div class="h-fxh"><b>예시 환자</b><span>여 1980-05-12 생, 방문 3회</span></div>
+<div class="h-fxg"><div><i>진단 중인 병</i>Essential hypertension<br>Diabetes mellitus type 2</div><div><i>복용 중인 약</i>metformin 500 MG</div><div><i>최근 혈압</i><b>138/88</b> mm[Hg]</div></div>
+<div class="h-fxy">2026</div><div class="h-fxe"><span>03-02</span><span class="t">외래</span><b>General examination</b><span class="c">검사 3</span></div>
+<div class="h-fxy">2025</div><div class="h-fxe"><span>09-15</span><span class="t em">응급</span><b>Emergency room admission</b><span class="c">진단 1, 검사 3, 처방 1</span></div></div>`}};
+let hdemo="raw";
+const hdemoBody=()=>HDEMO[hdemo].h;
+const welcomeHtml=()=>`<div class="h-wrap"><div class="h-l">
   <span class="logo big" aria-hidden="true">{ }</span>
-  <h2>JSON을 정리된 모양으로 본다</h2>
-  <p>트리, 표, 경로로 바꿔 보고, FHIR Bundle이면 환자와 리소스 단위로 묶어서 보여 준다. 파일은 이 브라우저 밖으로 나가지 않는다.</p>
-  <div class="home-row"><label class="btn pri lg">파일 열기<input type="file" multiple hidden data-open-file accept=".json,.jsonl,.ndjson,.txt,application/json"></label><button class="btn lg" data-example="json">예시로 보기</button></div>
-  <div class="home-hint"><span>파일을 이 창에 끌어다 놓아도 된다. 여러 파일을 한 번에 열 수 있다.</span><span><kbd>⌘</kbd> <kbd>V</kbd> 로 붙여 넣어도 된다. 윈도우는 <kbd>Ctrl</kbd> <kbd>V</kbd>.</span></div>
-  <section class="privacy" aria-labelledby="pvh"><h3 id="pvh">올린 파일 처리</h3><ul>
-    <li><b>파일은 이 브라우저 안에서만 읽는다.</b> 서버로 보내지 않는다. 붙여 넣은 내용도 같다.</li>
-    <li><b>파일 내용은 저장하지 않는다.</b> 탭을 닫거나 새로고침하면 사라진다.</li>
-    <li>브라우저에 남기는 것은 설정 두 가지뿐이다. 밝게, 어둡게 테마와 한 번에 보여 줄 개수다.</li>
-    <li>바깥과 주고받는 것은 이 페이지를 처음 받을 때 한 번뿐이다. 글꼴, 분석 도구, 광고를 따로 불러오지 않는다. 쿠키도 쓰지 않는다.</li>
-    <li>환자 기록처럼 민감한 파일을 열어도 이 컴퓨터 밖으로 나가지 않는다.</li>
-  </ul></section>
-</div><div class="home-r">
-  <div class="vc"><b>트리</b><span>접고 펼치며 본다</span><pre>▾ <span class="k">totals</span> {11}
-    <span class="k">sessions</span> : <span class="v">7</span>
-    <span class="k">model_turns</span> : <span class="v">2161</span>
-  ▸ <span class="k">sessions</span> [7]</pre></div>
-  <div class="vc"><b>표</b><span>같은 모양의 묶음은 표로</span><pre><span class="k">title</span>          <span class="k">turns</span>
-문서 작업        <span class="v">696</span>
-아이디어 정리    <span class="v">569</span>
-설계 검토        <span class="v"> 77</span></pre></div>
-  <div class="vc"><b>원문</b><span>줄 번호가 있는 정리된 JSON</span><pre>1  {
-2    <span class="k">"schema"</span>: <span class="s">"agent-log/v1"</span>,
-3    <span class="k">"sessions"</span>: [ … ]</pre></div>
-  <div class="vc"><b>경로</b><span>모든 값을 경로와 함께</span><pre><span class="k">$.totals.sessions</span>     <span class="v">7</span>
-<span class="k">$.sessions[0].title</span>   <span class="s">"…"</span>
-<span class="k">$.sessions[0].turns</span>   <span class="v">696</span></pre></div>
-  <div class="vc fhir"><span class="t">FHIR Bundle을 열면 더 생긴다</span><div class="mini"><div><b>점검</b>파일 전체의 개수, 코드, 참조</div><div><b>리소스</b>참조 따라가기, 필수 필드</div><div><b>환자</b>요약, 방문 타임라인, 검사 추이</div></div><button class="exlink" data-example="fhir">예시 환자 기록으로 열어 보기</button></div>
+  <h2>JSON을 읽히는 모양으로</h2>
+  <p class="h-sub">괄호만 수천 줄 이어진 파일을 트리, 표, 경로로 바꿔 본다.</p>
+  <div class="h-row"><label class="btn pri lg">파일 열기<input type="file" multiple hidden data-open-file accept=".json,.jsonl,.ndjson,.txt,application/json"></label><button class="btn lg" data-example="json">예시로 보기</button></div>
+  <div class="h-hint">끌어다 놓거나 <kbd>⌘</kbd> <kbd>V</kbd> 로 붙여 넣어도 된다. 윈도우는 <kbd>Ctrl</kbd> <kbd>V</kbd></div>
+  <div class="h-badges"><span class="h-bd"><i>✓</i>서버 전송 없음</span><span class="h-bd"><i>✓</i>저장 없음</span><span class="h-bd"><i>✓</i>설치, 가입 없음</span><span class="h-bd"><i>✓</i>쿠키, 분석 도구 없음</span></div>
+  <details class="h-more"><summary>자세히</summary><p>파일은 이 브라우저 안에서만 읽고, 탭을 닫으면 사라진다. 브라우저에 남기는 것은 테마와 한 번에 보여 줄 개수 두 가지 설정뿐이다. 바깥과 주고받는 것은 이 페이지를 처음 받을 때 한 번뿐이다. 환자 기록처럼 민감한 파일도 이 컴퓨터 밖으로 나가지 않는다.</p></details>
+</div><div class="h-r">
+  <div class="h-demo">
+    <div class="h-dh"><span class="h-seg" role="tablist" aria-label="미리보기">${[["raw","원문 그대로"],["tree","트리"],["table","표"],["path","경로"],["fhir","FHIR"]].map(([k,l])=>`<button class="${k==="raw"?"h-rawtab ":""}${hdemo===k?"on":""}" data-hdemo="${k}" role="tab" aria-selected="${hdemo===k}">${l}</button>`).join("")}</span><span class="h-cap">${HDEMO[hdemo].cap}</span></div>
+    <div class="h-db">${hdemoBody()}</div>
+    ${hdemo==="fhir"?`<div class="h-df"><span>FHIR Bundle은 환자 단위로 묶고, 리소스끼리 참조를 따라간다</span><button data-example="fhir">예시 환자 기록 열기</button></div>`:""}
+  </div>
+  <div class="h-chips"><span class="h-chip"><b>20MB</b>파일도 1초 안에 열림</span><span class="h-chip"><b>여러 파일</b>한 번에 열고 오가며</span><span class="h-chip"><b>검색</b>찾은 곳까지 펼쳐 줌</span></div>
 </div></div>`;
+document.addEventListener("click",e=>{const b=e.target.closest("[data-hdemo]");if(!b)return;hdemo=b.dataset.hdemo;const w=document.querySelector(".h-wrap");if(w)w.outerHTML=welcomeHtml()});
 document.addEventListener("change",e=>{if(!e.target.matches("[data-open-file]"))return;const l=[...e.target.files];e.target.value="";openFiles(l)});
 document.addEventListener("click",e=>{const b=e.target.closest("[data-example]");if(!b)return;const fh=b.dataset.example==="fhir";if(fh)menu="pt";openFiles([new File([JSON.stringify(fh?EXAMPLE_FHIR:EXAMPLE)],fh?"예시_FHIR_환자기록.json":"예시_일반.json")])});
 function render(){
