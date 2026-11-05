@@ -1,0 +1,1118 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>제이슨</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22%231e3a8a%22/%3E%3Ctext%20x%3D%2216%22%20y%3D%2222%22%20text-anchor%3D%22middle%22%20font-family%3D%22Menlo%2Cmonospace%22%20font-size%3D%2216%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%3E%7B%20%7D%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap">
+<style>
+/* 레이아웃: 머리 → 입력 → 보는 방식 라벨(원문, 트리, 표, 경로 + FHIR일 때 점검, 표 만들기, 리소스, 환자) → 내용. 기획서 양식과 같은 회백 바탕, 강조는 남색 하나 */
+:root{
+  --bg:#fafaf9; --bg2:#ffffff; --line:#e6e6e3; --line2:#d2d2ce; --text:#191c1f; --dim:#4b5158; --faint:#666b73; --acc:#1e3a8a; --acc-soft:#e9edf7; --head:#f1f1ef;
+  --key:#1e3a8a; --str:#2f6b45; --num:#a84a08; --bool:#6b3fa0; --null:#7a8089; --sel:#f1f1ef; --hl:#fff1bd; --red:#b42318;
+  --body:Pretendard,"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+  --mono:"SF Mono",Menlo,ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+  --bg:#141517; --bg2:#1c1d20; --line:#2b2d31; --line2:#3a3d42; --text:#ebebe9; --dim:#b4b7bc; --faint:#969aa1; --acc:#9db4ff; --acc-soft:#1f2740; --head:#232528;
+  --key:#9db4ff; --str:#8fd19e; --num:#ffb55c; --bool:#d4a5ff; --null:#80858c; --sel:#232528; --hl:#4a3f12; --red:#ff8a80;}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --bg:#141517; --bg2:#1c1d20; --line:#2b2d31; --line2:#3a3d42; --text:#ebebe9; --dim:#b4b7bc; --faint:#969aa1; --acc:#9db4ff; --acc-soft:#1f2740; --head:#232528;
+  --key:#9db4ff; --str:#8fd19e; --num:#ffb55c; --bool:#d4a5ff; --null:#80858c; --sel:#232528; --hl:#4a3f12; --red:#ff8a80;}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 var(--body);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;word-break:keep-all;
+  padding-block:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;overflow:hidden}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.meta{display:flex;gap:6px 14px;flex-wrap:wrap;color:var(--dim);font-size:12.5px}
+.meta .ex{color:var(--acc);font-weight:600}
+.btns{display:flex;gap:6px;flex-wrap:wrap}
+.btn{height:32px;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);padding:0 12px;border-radius:6px;background:var(--bg2);font-size:13px;white-space:nowrap}
+.btn:hover{border-color:var(--acc);color:var(--acc)}
+.btn.on{background:var(--text);color:var(--bg2);border-color:var(--text)}
+.view{flex:1;min-height:0;overflow:auto;padding:8px 0 max(24px,env(safe-area-inset-bottom,0px))}
+.empty{color:var(--dim);padding:32px 8px}
+.err{color:var(--red);padding:16px 8px}
+.err p{margin:6px 0 0;color:var(--text)}
+.err p.dm{color:var(--faint);font-size:12px}
+/* 트리 */
+.n{padding-left:16px}
+.view>.n{padding-left:0}
+.n>.l{display:flex;gap:6px;align-items:baseline;padding:1px 4px;border-radius:3px}
+.n>.l:hover{background:var(--sel)}
+.hit{background:var(--hl)!important}
+.n.c>.l{cursor:pointer}
+.tg{width:12px;color:var(--faint);flex:none;text-align:center}
+.n.c.open>.l .tg::before{content:"▾"}
+.n.c:not(.open)>.l .tg::before{content:"▸"}
+.k{color:var(--key);flex:none;white-space:nowrap}
+.k.i{color:var(--faint)}
+.s{color:var(--str);white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
+.v{color:var(--num)}
+.b{color:var(--bool)}
+.z{color:var(--null)}
+.p{color:var(--faint)}
+.sum{color:var(--faint);font-size:12px;white-space:nowrap}
+.sum em.itag{color:var(--text)}
+.sum em{font-style:normal;color:var(--dim);margin-left:6px}
+.n:not(.open)>.kids{display:none}
+.kids{border-left:1px solid var(--line);margin-left:9px}
+.cp{visibility:hidden;color:var(--faint);font-size:11px;margin-left:4px;flex:none}
+.n>.l:hover .cp{visibility:visible}
+.cp:hover{color:var(--text)}
+/* 표 */
+.tblwrap{overflow:auto;max-height:70vh;margin:4px 0 8px 10px;border:1px solid var(--line);border-radius:4px;background:var(--bg2)}
+table{border-collapse:collapse;font-size:12px;min-width:100%}
+th,td{padding:3px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;white-space:nowrap;max-width:360px;overflow:hidden;text-overflow:ellipsis}
+th{color:var(--dim);font-weight:500;background:var(--bg);position:sticky;top:0;z-index:1}
+td.r,th.r{text-align:right}
+td>.s{white-space:nowrap}
+tbody tr:hover td{background-color:var(--sel)}
+td.db{min-width:11ch;background-image:linear-gradient(90deg,color-mix(in srgb,var(--key) 18%,transparent) var(--p),transparent var(--p));background-repeat:no-repeat;background-size:calc(100% - 8px) 70%;background-position:4px center}
+.rk{color:var(--faint)}
+td.rk{color:var(--key)}
+.sub{display:inline;text-align:left;color:var(--dim)}
+.sub .c{color:var(--faint);text-decoration:underline dotted;text-underline-offset:3px;margin-right:6px}
+.sub:hover,.sub.on{color:var(--text)}
+.sub.on .c{color:var(--acc);text-decoration-style:solid}
+tr.subrow>td>div+div{margin-top:4px}
+tr.subrow>td{white-space:normal;max-width:none;background:var(--bg);padding:4px 10px 6px 24px}
+/* FHIR 보기 */
+.btn:disabled{opacity:.45;cursor:default}
+/* 데이터 점검 */
+.ck-sum{display:flex;flex-wrap:wrap;gap:8px 32px;margin:6px 0 20px;padding:10px 14px;border:1px solid var(--line2);border-radius:6px;background:var(--bg2)}
+.ck-j{display:block;text-align:left;border-radius:6px;padding:2px 6px;margin:-2px -6px}
+.ck-j:hover{background:var(--acc-soft)}
+.ck-j dd{text-decoration:underline dotted;text-underline-offset:4px}
+.ck-sum dt{font-size:11px;color:var(--faint)}
+.ck-sum dd{margin:0;font-size:18px;font-weight:600}
+.ck-sum dd.warn,.wn{color:var(--red)}
+.ck{margin-bottom:24px}
+.ck h3{font-size:13px;font-weight:600;margin:0 0 6px}
+.ck h3 i{font-style:normal;font-weight:400;color:var(--faint);margin-left:10px;font-size:12px}
+.ck p{color:var(--dim);margin:4px 0 8px;max-width:90ch}
+.ck .tblwrap{margin-left:0}
+.ck-row{cursor:pointer}
+.ck td.k{color:var(--key)}
+.dm{color:var(--dim)}
+.ck td.nm{max-width:420px}
+.ck-det{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px 24px}
+.ck-det h4{font-size:12px;font-weight:500;color:var(--dim);margin:0 0 4px}
+.pl{color:var(--key);text-decoration:underline dotted;text-underline-offset:3px;margin:0 12px 3px 0;font-size:12px}
+.pl:hover{color:var(--text)}
+.rs{display:flex;flex-direction:column;gap:10px}
+.rs-h{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.rs-h b{font-size:15px}
+.rs-w{display:flex;gap:14px;flex-wrap:wrap;align-items:baseline}
+.rs-w .v{color:var(--num)}
+.rs-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:14px 28px;padding:10px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.rs-g h3,.rs-src{font-size:12px;font-weight:600;margin:0 0 6px}
+.rs-g h3 i{display:block;font-style:normal;font-weight:400;color:var(--faint);font-size:11px}
+.rs-c{display:grid;grid-template-columns:4em minmax(0,1fr) auto;gap:8px;align-items:baseline}
+.rs-c .ok{color:var(--acc)}
+.rs-c i{font-style:normal;color:var(--faint);font-size:11px}
+.rs-r{display:flex;gap:8px;align-items:baseline;min-width:0;padding:1px 0}
+.rs-r code{flex:none;max-width:16ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+.rs-r .pl{margin:0;text-align:left;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rs-r .lb{flex:none;width:5em}
+.refl{text-decoration:underline dotted;text-underline-offset:3px;text-align:left}
+.refl:hover .s{color:var(--text)}
+.raw>.pl{display:block;margin-bottom:4px}
+.ln.focus{background:var(--hl)}
+.pc .pl{margin:0;font-size:inherit;text-align:left}
+.ck-li{display:flex;gap:8px;justify-content:space-between;max-width:340px}
+.pt{border:1px solid var(--line2);background:var(--bg2);border-radius:6px;padding:12px 14px;margin:6px 0 12px;display:flex;flex-direction:column;gap:12px}
+.pp{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--dim);padding-bottom:10px;border-bottom:1px dashed var(--line2)}
+.pp select{border:1px solid var(--line2);border-radius:4px;background:var(--bg);padding:2px 6px;font-size:13px;max-width:100%}
+.ph{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;color:var(--dim)}
+.ph b{font-size:15px;color:var(--text);font-weight:600}
+.pg{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 24px}
+.pc h3{font-size:12px;font-weight:500;color:var(--dim);margin:0 0 4px}
+.pc h3 i,.modes i,.chip i{font-style:normal;color:var(--faint);margin-left:4px}
+.pc ul{margin:0;padding:0;list-style:none;max-height:168px;overflow:auto}
+.pc li::before{content:"- ";color:var(--faint)}
+.pc .none{margin:0;color:var(--faint)}
+.pc dl{margin:0;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:1px 12px;align-items:baseline}
+.pc dt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pc dt .pl{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc dd{margin:0;color:var(--num);text-align:right;white-space:nowrap}
+.pc dd.d{color:var(--faint);font-size:11px}
+.pg>.pc:has(dl){grid-column:span 2}
+@media(max-width:720px){.pg>.pc:has(dl){grid-column:auto}}
+.modes{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line2);margin-bottom:8px;position:sticky;top:0;background:var(--bg);z-index:2}
+.modes button{padding:6px 10px 7px;border-bottom:2px solid transparent;margin-bottom:-1px;color:var(--dim)}
+.modes button:hover{color:var(--text)}
+.modes button.on{color:var(--text);border-bottom-color:var(--acc);font-weight:600}
+details>summary{list-style:none;cursor:pointer}
+details>summary::-webkit-details-marker{display:none}
+.yr{display:flex;gap:10px;align-items:baseline;margin:18px 0 2px;padding:0 4px 4px;border-bottom:1px solid var(--line2);font-weight:600;font-size:14px}
+.yr:first-child{margin-top:6px}
+.yr i{font-style:normal;font-weight:400;font-size:12px;color:var(--faint)}
+.enc>summary .dt{color:var(--dim);min-width:3.2em}
+.sep{color:var(--faint);font-size:11px;margin:6px 0 2px 4px;padding-top:4px;border-top:1px dashed var(--line)}
+.enc{border-bottom:1px solid var(--line)}
+.enc>summary{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;padding:6px 4px;border-radius:3px}
+.enc>summary::before{content:"▸";color:var(--faint);width:10px}
+.enc[open]>summary::before{content:"▾"}
+.enc>summary:hover,.ln:hover,.obs summary:hover{background:var(--sel)}
+.dt{color:var(--faint);white-space:nowrap}
+.enc .ty{font-weight:500}
+.cls{font-size:11px;border:1px solid currentColor;border-radius:3px;padding:0 5px;color:var(--dim)}
+.cls.c-EMER{color:var(--red)}
+.cls.c-IMP{color:var(--num)}
+.enc .rs,.enc .who{color:var(--dim);font-size:12px}
+.enc .cnt{color:var(--faint);font-size:12px;white-space:pre-wrap}
+.lns{padding:0 0 8px 26px}
+.ln{display:grid;grid-template-columns:64px minmax(0,min(64ch,60%)) minmax(10ch,1fr);gap:2px 16px;padding:1px 4px;border-radius:3px;cursor:pointer;align-items:baseline}
+.ln.d{grid-template-columns:64px 88px minmax(0,min(64ch,55%)) minmax(10ch,1fr)}
+.ln.on{background:var(--sel)}
+.ln.adm{color:var(--dim)}
+.ln .ex{color:var(--num)}
+.ln .wt i{color:var(--faint);font-style:normal}
+.lb{color:var(--faint);font-size:12px}
+.inf{font-size:10.5px;color:var(--dim);border:1px dashed var(--line2);border-radius:3px;padding:0 4px;margin-left:8px;white-space:nowrap}
+.t-Condition{color:var(--bool)}
+.t-Observation{color:var(--num)}
+.t-Procedure{color:var(--str)}
+.t-MedicationRequest,.t-MedicationAdministration,.t-Immunization{color:var(--key)}
+.t-Encounter{color:var(--text)}
+.raw{margin:2px 0 8px 64px;padding:6px 8px;border-left:1px solid var(--line2);background:var(--bg2)}
+.obs .oh,.obs .orow{display:grid;grid-template-columns:minmax(0,1fr) 120px 48px 190px 96px minmax(88px,240px);gap:12px;padding:3px 4px;align-items:center}
+.obs .oh{color:var(--faint);font-size:12px;border-bottom:1px solid var(--line2)}
+.obs details{border-bottom:1px solid var(--line)}
+.obs .r{text-align:right}
+.obs .v{color:var(--num)}
+.obs .wt,.obs .ca{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.obs .ca{color:var(--dim);font-size:12px}
+.spk{color:var(--num);display:block}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+.chip{border:1px solid var(--line2);border-radius:4px;padding:2px 9px;background:var(--bg2);font-size:12px}
+.chip b{font-weight:500;color:var(--dim);margin-left:4px}
+.chip.on{border-color:var(--text);background:var(--text);color:var(--bg2)}
+.chip.on i,.chip.on b{color:var(--bg2);opacity:.7}
+@media(max-width:640px){.bar .path{max-width:100%;margin-left:0}
+  .ln,.ln.d{grid-template-columns:56px minmax(0,1fr)}.ln>*:not(.lb){grid-column:2}.ln .ex{text-align:left}
+  .obs .oh{display:none}.obs .orow{grid-template-columns:minmax(0,1fr) auto 88px}.obs .orow>.ca,.obs .orow>.dt,.obs .orow>.r:nth-child(3){display:none}
+  .raw{margin-left:0}.lns{padding-left:8px}}
+/* 머리, 라벨 줄, 본문 */
+.btn.pri{background:var(--acc);border-color:var(--acc);color:var(--bg2);font-weight:600}
+.btn.pri:hover{color:var(--bg2);filter:brightness(1.12)}
+.main{flex:1;display:flex;flex-direction:column;min-height:0;min-width:0;padding-top:14px}
+.ctx{flex:none;display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font-size:12.5px;color:var(--dim)}
+#pickLabel{font-weight:600;color:var(--text)}
+.ctx .cur{display:inline-flex;gap:10px;align-items:baseline;font-size:13.5px;max-width:100%}
+.ctx .cur b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ctx .cur span{font-size:12px;color:var(--acc)}
+.pdrop{flex:none;margin:-2px 0 12px;border:1px solid var(--line2);border-radius:8px;background:var(--bg2);padding:10px;max-height:min(50vh,420px);display:flex;flex-direction:column}
+.pdrop .pitems{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:4px;overflow:auto;min-height:0}
+.pls{display:flex;flex-direction:column;gap:8px;min-height:0}
+.pq{border:1px solid var(--line2);border-radius:6px;background:var(--bg);padding:5px 10px;font-size:13px}
+.pq:focus{outline:0;border-color:var(--acc)}
+.pi{display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:6px 10px;border-radius:6px;border:1px solid transparent;width:100%}
+.pi b{font-weight:600;font-size:13.5px}
+.pi b,.pi span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pitems{overflow-x:hidden}
+.pi span{font-size:11.5px;color:var(--faint)}
+.pi:hover{background:var(--sel)}
+.pi.on{background:var(--acc-soft);border-color:var(--acc)}
+.pi.on b{color:var(--acc)}
+#fpos{color:var(--faint)}
+.pgs{font-size:12.5px;color:var(--dim);display:inline-flex;gap:6px;align-items:center}
+.pgs select{border:1px solid var(--line2);border-radius:6px;background:var(--bg2);padding:3px 6px}
+.n,.view code,.rs-r code,.k{font-family:var(--mono)}
+.n{font-size:12.5px}
+/* 리소스 고르기 */
+.rb{display:grid;grid-template-columns:minmax(150px,190px) minmax(220px,300px) minmax(0,1fr);gap:20px;align-items:start}
+.rb-types{position:sticky;top:0;max-height:calc(100vh - 230px);overflow:auto;display:flex;flex-direction:column;gap:2px}
+.rt{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"l n" "k k";gap:0 8px;text-align:left;padding:5px 10px;border-radius:6px;border:1px solid transparent;width:100%}
+.rt b{grid-area:l;font-weight:600;font-size:13.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rt .k{grid-area:k;font-size:11px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rt i{grid-area:n;font-style:normal;font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
+.rt:hover{background:var(--sel)}
+.rt.on{background:var(--acc-soft);border-color:var(--acc)}
+.rt.on b,.rt.on i{color:var(--acc)}
+.rb-list{position:sticky;top:0;max-height:calc(100vh - 230px);display:flex;flex-direction:column;gap:8px}
+.rb-items{overflow:auto;border:1px solid var(--line);border-radius:6px;background:var(--bg2);min-height:0}
+.rb-i{display:grid;grid-template-columns:84px minmax(0,1fr);gap:8px;width:100%;text-align:left;padding:4px 10px;border-bottom:1px solid var(--line);font-size:12.5px}
+.rb-i span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rb-i:hover{background:var(--sel)}
+.rb-i.on{background:var(--acc-soft);color:var(--acc);font-weight:600}
+@media(max-width:1100px){.rb{grid-template-columns:minmax(150px,180px) minmax(0,1fr)}.rb-main{grid-column:1/-1}}
+@media(max-width:700px){.rb{grid-template-columns:1fr}.rb-types{position:static;max-height:none;flex-direction:row;flex-wrap:wrap}.rt{width:auto}.rt .k{display:none}.rb-list{position:static;max-height:none}.rb-items{max-height:240px}}
+@media(max-width:640px){.vgrp{border-left:0;padding-left:0;margin-left:0}.vl{padding:6px 14px;font-size:14px}}
+/* 원문, 경로 */
+.code{display:grid;grid-template-columns:auto minmax(0,1fr);border:1px solid var(--line);border-radius:6px;background:var(--bg2);font:12.5px/1.6 var(--mono);overflow:auto}
+.code pre{margin:0;padding:8px 12px;white-space:pre}
+.code .ln-no{color:var(--faint);text-align:right;user-select:none;border-right:1px solid var(--line);background:var(--head)}
+.code mark,.pv mark{background:var(--hl);color:inherit}
+.morebtn{display:block;margin:4px 0 6px 16px;padding:3px 12px;border:1px dashed var(--line2);border-radius:999px;font-size:12px;color:var(--acc)}
+.morebtn:hover{border-color:var(--acc)}
+.pv{border:1px solid var(--line);border-radius:6px;background:var(--bg2);overflow:auto}
+.pv button{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;width:100%;text-align:left;padding:2px 12px;border-bottom:1px solid var(--line);font:12.5px/1.6 var(--mono)}
+.pv button:hover{background:var(--sel)}
+.pv .pk{color:var(--key);overflow-wrap:anywhere}
+.pv .pval{overflow-wrap:anywhere}
+/* 첫 화면과 예시 표시 */
+.welcome{max-width:640px;margin:24px auto;padding:20px 24px;border:1px solid var(--line2);border-radius:10px;background:var(--bg2);text-align:center}
+.welcome h2{font-size:20px;margin:0 0 10px;text-wrap:balance}
+.welcome p{margin:6px 0;color:var(--dim)}
+.welcome .wb{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:18px 0 12px}
+.btn.big{font-size:15px;padding:8px 22px;border-radius:8px}
+.exnote{margin:0 0 10px;padding:8px 12px;border-radius:6px;background:var(--acc-soft);color:var(--acc);font-size:13px}
+/* ── 시안 D: 위 막대 하나, 왼쪽 목록, 오른쪽 이어지는 내용. 컨트롤 높이 32px, 모서리 6px, 글자 12/13/14/16/20 ── */
+body{padding-left:0;padding-right:0}
+.top{flex:none;display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));background:var(--bg2);border-bottom:1px solid var(--line)}
+.top .brand{font-size:16px;font-weight:700;letter-spacing:-.01em;margin-right:4px}
+.top .sp,.sub .sp{flex:1}
+.views{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.seg{display:inline-flex;gap:2px;padding:3px;border-radius:8px;background:var(--head)}
+.vl{height:26px;padding:0 12px;border-radius:5px;color:var(--dim);font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.vl:hover{color:var(--text)}
+.vl.on{background:var(--bg2);color:var(--acc);font-weight:600;box-shadow:0 0 0 1px var(--line)}
+.vl i{font-style:normal;font-weight:500;font-size:12px;color:var(--faint)}
+.vgrp{display:inline-flex;gap:8px;align-items:center}
+.vgrp>span:first-child{font-size:12px;font-weight:700;color:var(--acc)}
+.find{display:inline-flex;align-items:center;gap:8px}
+.ctl{height:32px;border:1px solid var(--line2);border-radius:6px;background:var(--bg);padding:0 10px;width:260px;max-width:100%;font-size:13px}
+.ctl:focus{outline:0;border-color:var(--acc)}
+#hits{font-size:12px;color:var(--dim);white-space:nowrap}
+.sub{flex:none;display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;min-height:44px;padding:6px max(16px,env(safe-area-inset-right,0px)) 6px max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line)}
+.sub .meta{font-size:12px}
+.tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pgs select{height:32px;border:1px solid var(--line2);border-radius:6px;background:var(--bg2);padding:0 8px}
+.body2{flex:1;min-height:0;display:flex}
+.side{flex:none;width:248px;border-right:1px solid var(--line);background:var(--bg2);display:flex;flex-direction:column;min-height:0;padding-left:env(safe-area-inset-left,0px)}
+.side-h{display:flex;justify-content:space-between;align-items:baseline;padding:12px 14px 6px;font-size:12px;color:var(--faint)}
+.side-h b{font-size:13px;color:var(--text)}
+.side .pls{flex:1;min-height:0;padding:0 10px 10px}
+.side .pitems{overflow:auto;display:flex;flex-direction:column;gap:2px;min-height:0}
+.main{flex:1;min-width:0;padding:0 max(16px,env(safe-area-inset-right,0px)) 0 20px}
+.view{padding:18px 0 max(24px,env(safe-area-inset-bottom,0px))}
+.path{flex:none;font-size:12px;color:var(--faint);padding:4px 0 6px;border-top:1px solid var(--line);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:26px}
+.path b{font-weight:600;color:var(--acc)}
+body.over::after{content:"여기에 놓으면 연다";position:fixed;inset:12px;border:2px dashed var(--acc);border-radius:12px;background:color-mix(in srgb,var(--acc) 6%,var(--bg));display:grid;place-items:center;font-size:20px;font-weight:600;color:var(--acc);z-index:50;pointer-events:none}
+/* 환자 화면: 이름, 요약 상자, 회색 판 탭, 연도 머리줄, 방문 카드 */
+.pt{border:0;background:none;padding:0;margin:0 0 4px;gap:14px}
+.ph{color:var(--dim);font-size:13px}
+.ph b{font-size:20px;font-weight:700;color:var(--text);flex-basis:100%;letter-spacing:-.01em}
+.pc{border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--bg2)}
+.pc h3{font-size:12px;font-weight:600;color:var(--faint)}
+.pc dd{color:var(--text);font-weight:600}
+.pp{border-bottom:1px solid var(--line)}
+.modes{display:inline-flex;gap:2px;padding:3px;border-radius:8px;background:var(--head);border:0;position:static;margin:16px 0 4px;width:max-content;max-width:100%;flex-wrap:wrap}
+.modes button{height:26px;padding:0 12px;border-radius:5px;border:0;margin:0;color:var(--dim)}
+.modes button.on{background:var(--bg2);color:var(--acc);font-weight:600;box-shadow:0 0 0 1px var(--line)}
+.yr{font-size:16px;font-weight:700;border-bottom:1px solid var(--line);margin:22px 0 10px;padding:0 0 6px}
+.yr i{font-size:12px}
+.enc{border:1px solid var(--line);border-radius:6px;background:var(--bg2);margin-bottom:8px}
+.enc>summary{padding:9px 12px;border-radius:6px}
+.enc>summary .dt{color:var(--faint)}
+.enc .ty{font-weight:600}
+.enc .cnt{margin-left:auto}
+.lns{padding:4px 12px 8px;border-top:1px solid var(--line)}
+.ln .ex{color:var(--text);font-weight:600}
+.lb,.t-Condition,.t-Observation,.t-Procedure,.t-MedicationRequest,.t-MedicationAdministration,.t-Immunization,.t-Encounter{color:var(--faint)}
+.cls{border:0;background:var(--head);color:var(--dim);border-radius:4px;padding:0 6px;font-size:12px}
+.cls.c-EMER{color:var(--red)}
+.cls.c-IMP{color:var(--text)}
+.spk{color:var(--acc)}
+.obs .v,.rs-w .v{color:var(--text);font-weight:600}
+/* 점검: 표 안 스크롤을 없애 바깥 스크롤 하나로 */
+.ck .tblwrap{max-height:none}
+/* 리소스 */
+.rb-i:not(:has(.dt)){grid-template-columns:1fr}
+.rs-r .dt{font-size:12px}
+@media(max-width:1100px){.rb-items{max-height:240px}.rb-types{position:static;max-height:240px}.rb-list{position:static}}
+/* 오류: 상자로 감싸 먼저 보이게 */
+.err{border:1px solid var(--red);border-radius:6px;background:color-mix(in srgb,var(--red) 6%,var(--bg2));padding:14px 16px;margin:4px 0 16px}
+.err b{font-size:16px}
+.err+.welcome{margin-top:8px;padding:18px 20px}
+.err+.welcome h2{font-size:16px}
+/* 트리: 키는 고정폭, 한글 값은 본문 글꼴 */
+.n .s{font-family:var(--body)}
+/* 좁은 화면: 왼쪽 목록 대신 위 「목록」 버튼 */
+@media(min-width:901px){#ctx.with-side,#pdrop.with-side{display:none!important}}
+@media(max-width:900px){.side{display:none!important}.main{padding-left:max(16px,env(safe-area-inset-left,0px))}.ctx{margin-top:10px}}
+@media(max-width:640px){.find,.find .ctl{width:100%}.top .sp{display:none}.views{width:100%}.sub .tools{display:none}.welcome{margin:20px 0;padding:20px 16px}}
+.pc li{display:flex;gap:6px;align-items:baseline}
+.pc li::before{flex:none}
+.pc .pl{color:var(--text);text-decoration:none;font-size:13px}
+.pc .pl:hover{color:var(--acc);text-decoration:underline}
+@media(max-width:1200px) and (min-width:641px){.find .ctl{width:170px}}
+.ctx{margin:14px 0 0}
+.rs-sum{margin:0 0 6px;font-size:12px;color:var(--dim)}
+.rs-g .morebtn{margin:6px 0 0}
+.rs-g{align-items:start}
+.code .s{white-space:pre;overflow-wrap:normal}
+/* 종류 이름 칸은 폭이 정해져 있어 긴 영어 이름은 말줄임 */
+.lb{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 리소스 상세 (시안 1) */
+.rs{gap:0}
+.dh{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.dh .ty{font-size:12px;font-weight:600;color:var(--faint)}
+.dh h2{font-size:20px;margin:2px 0 0;flex-basis:100%;letter-spacing:-.01em}
+.hc{font-size:12px;padding:1px 8px;border-radius:4px;background:var(--head);color:var(--dim)}
+.hc.mono{font-family:var(--mono);font-size:11.5px}
+.rs .sec{margin-top:18px}
+.rs .sec h3{font-size:13px;font-weight:700;margin:0 0 8px;display:flex;gap:8px;align-items:baseline}
+.rs .sec h3 i{font-style:normal;font-weight:400;color:var(--faint);font-size:12px}
+.kvt{display:grid;grid-template-columns:minmax(120px,170px) minmax(0,1fr);border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--bg2)}
+.kvt>div{padding:7px 12px;border-top:1px solid var(--line);min-width:0;overflow-wrap:anywhere}
+.kvt>div:nth-child(-n+2){border-top:0}
+.kvk{background:var(--bg);color:var(--dim)}
+.kvk small{display:block;font-family:var(--mono);font-size:11px;color:var(--faint)}
+.kvv .fv+.fv{margin-top:2px}
+.kvv .fk{color:var(--faint);font-size:12px}
+.kvv .sepd{display:inline-block;width:14px}
+.cd{font-size:12px;color:var(--faint);margin-left:6px;white-space:nowrap;font-family:var(--mono)}
+.ref{color:var(--acc);text-decoration:underline;text-underline-offset:3px;text-align:left}
+.cond{color:var(--faint)}
+.cond em,.kvv .wn em{font-style:normal;font-size:11px;border:1px dashed var(--line2);border-radius:3px;padding:0 4px;margin-left:6px}
+.fold{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 12px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.fold b{font-weight:700;white-space:nowrap}
+.fold span{color:var(--dim);font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fold .ar{margin-left:auto;color:var(--faint);flex:none}
+.inb{padding:6px 4px 0}
+.okline{color:var(--str);font-size:13px}
+.missbox{border:1px solid var(--red);border-radius:6px;padding:10px 14px;background:color-mix(in srgb,var(--red) 6%,var(--bg2));color:var(--red)}
+.missbox ul{margin:6px 0 0;padding-left:18px;color:var(--text)}
+.rawbox{margin-top:8px;border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:var(--bg)}
+.rb-i{grid-template-areas:"d t" "d s";align-items:baseline}
+.rb-i .dt{grid-area:d}.rb-i .ri-t{grid-area:t;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rb-i .ri-s{grid-area:s;font-size:12px;color:var(--faint);font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rb-i:not(:has(.dt)){grid-template-areas:"t" "s"}
+.kvt.kin{grid-template-columns:minmax(80px,120px) minmax(0,1fr);margin:2px 0;font-size:12.5px;background:var(--bg2)}
+.kvt.kin .kvk{background:var(--head);padding:5px 10px}
+.kvt.kin .kvv{padding:5px 10px}
+.kvt.kin .kvk small{font-size:10.5px}
+.fmore{margin-top:4px}
+.fmore>summary{color:var(--acc);cursor:pointer;font-size:12px;list-style:none}
+.fmore>summary::-webkit-details-marker{display:none}
+.fmore[open]>summary{margin-bottom:4px}
+/* 내용 표 항목: 원래 필드 이름이 먼저, 한글 설명은 아래 작게 */
+.kvk .kk{font-family:var(--mono);font-size:12.5px;color:var(--text)}
+.kvk small{font-family:var(--body)!important;font-size:11.5px!important;color:var(--faint)}
+.qv{font-weight:600}
+.dh h2 .hv{margin-left:14px;color:var(--acc);font-weight:700}
+.idrow{display:inline-flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline}
+.idt{min-width:170px;color:var(--dim)}
+.idv{font-weight:600}
+.idrow .cd{margin-left:0}
+.idg{display:grid;grid-template-columns:max-content max-content minmax(80px,1fr);gap:4px 16px;align-items:baseline}
+.idg .cd{margin-left:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.kvk .kk{overflow-wrap:anywhere}
+/* 내용 표 안 코드 표시는 칸 안에서 줄바꿈한다. 넘치면 잘려 안 보인다 */
+.kvv .cd{white-space:normal;overflow-wrap:anywhere}
+.idg{grid-template-columns:minmax(0,max-content) minmax(0,max-content) minmax(80px,1fr)}
+.idg .idt,.idg .idv{overflow-wrap:anywhere;min-width:0}
+/* 좁은 창: 안쪽 넓은 표가 칸을 밀지 못하게 하고, 점검 표는 글자 칸을 줄바꿈해 화면 폭에 맞춘다 */
+.rb>*,.rb-main,.rs,.rawbox,.kvt>div{min-width:0}
+@media(max-width:700px){.rb{grid-template-columns:minmax(0,1fr)}}
+.ck table{width:100%}
+.ck th,.ck td{white-space:normal;max-width:none;overflow-wrap:anywhere}
+.ck td.r,.ck th.r,.ck td.db{white-space:nowrap}
+/* 로고: 남색 네모 안의 흰 중괄호 */
+.top .brand{display:inline-flex;align-items:center;gap:8px;font-size:16px;font-weight:700;margin-right:4px}
+.logo{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:7px;background:var(--acc);color:var(--bg2);font:700 13px/1 var(--mono);letter-spacing:-.04em}
+/* 첫 화면 (시안 B): 왼쪽 소개와 버튼, 오른쪽 보는 방식 카드 */
+.home{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:40px;padding:40px 24px 24px;max-width:1180px;margin:0 auto;align-items:start}
+.logo.big{width:64px;height:64px;border-radius:16px;font-size:26px}
+.home-l h2{font-size:28px;line-height:1.3;margin:18px 0 10px;letter-spacing:-.02em;text-wrap:balance}
+.home-l p{margin:0 0 22px;color:var(--dim)}
+.home-row{display:flex;gap:10px;flex-wrap:wrap}
+.btn.lg{height:44px;padding:0 22px;font-size:15px;border-radius:8px}
+.home-hint{margin-top:16px;color:var(--faint);font-size:13px;display:flex;flex-direction:column;gap:6px}
+kbd{font:600 12px var(--mono);padding:1px 6px;border:1px solid var(--line2);border-bottom-width:2px;border-radius:4px;background:var(--bg2);color:var(--dim)}
+.home-r{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.vc{border:1px solid var(--line);border-radius:10px;background:var(--bg2);padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.vc b{font-size:14px}.vc>span{font-size:12.5px;color:var(--dim)}
+.vc pre{margin:0;padding:8px 10px;border-radius:6px;background:var(--bg);font:11.5px/1.6 var(--mono);color:var(--dim);overflow:hidden;height:74px}
+.vc pre .k{color:var(--key)}.vc pre .s{color:var(--str)}.vc pre .v{color:var(--num)}
+.vc.fhir{grid-column:1/-1;border-color:color-mix(in srgb,var(--acc) 35%,var(--line))}
+.vc.fhir .t{font-size:12px;font-weight:700;color:var(--acc)}
+.mini{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.mini div{padding:6px 10px;border-radius:6px;background:var(--bg);font-size:12px;color:var(--dim)}
+.mini b{display:block;font-size:12.5px;color:var(--text)}
+.exlink{align-self:flex-start;color:var(--acc);font-size:13px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:900px){.home{grid-template-columns:minmax(0,1fr);padding-top:24px}.mini{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:560px){.home-r{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <span class="brand"><span class="logo" aria-hidden="true">{ }</span><b>제이슨</b></span>
+  <nav class="views" id="views" aria-label="보는 방식"></nav>
+  <span class="sp"></span>
+  <span class="find"><input type="search" id="q" class="ctl" placeholder="검색: 키, 값, 코드 이름" aria-label="검색"><span id="hits"></span></span>
+  <label class="btn pri" id="openTop">파일 열기<input type="file" id="file" multiple accept=".json,.jsonl,.ndjson,.txt,application/json" hidden></label>
+  <button class="btn" id="theme">어둡게</button>
+</header>
+<div class="sub"><span class="meta" id="meta"></span><span class="sp"></span><span class="tools" id="tools"><label class="pgs">한 번에 <select id="pageSel" aria-label="배열과 표를 한 번에 보여 줄 개수"></select>개씩</label><button class="btn" id="expand">전부 펼치기</button><button class="btn" id="collapse">전부 접기</button></span></div>
+<div class="body2">
+  <aside class="side" id="side" hidden aria-label="목록"></aside>
+  <main class="main">
+    <div class="ctx" id="ctx" hidden><span id="pickLabel">환자</span><button class="btn cur" id="pickBtn" aria-expanded="false" aria-controls="pdrop"><b id="curName"></b><span>목록</span></button><button class="btn" id="prev" title="이전 ([)">이전</button><button class="btn" id="next" title="다음 (])">다음</button><span id="fpos"></span></div>
+    <div class="pdrop" id="pdrop" hidden></div>
+    <div class="view" id="view"></div>
+    <div class="path" id="path"></div>
+  </main>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const EXAMPLE_FHIR={"resourceType":"Bundle","type":"collection","entry":[{"fullUrl":"urn:uuid:ex-pat","resource":{"resourceType":"Patient","id":"ex-pat","identifier":[{"type":{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/v2-0203","code":"MR","display":"Medical Record Number"}],"text":"Medical Record Number"},"system":"http://example.org/mrn","value":"EX-000123"}],"name":[{"use":"official","family":"환자","given":["예시"]}],"gender":"female","birthDate":"1980-05-12","address":[{"city":"Seoul","country":"KR"}]}},{"fullUrl":"urn:uuid:ex-enc1","resource":{"resourceType":"Encounter","id":"ex-enc1","status":"finished","class":{"system":"http://terminology.hl7.org/CodeSystem/v3-ActCode","code":"AMB"},"type":[{"coding":[{"system":"http://snomed.info/sct","code":"162673000","display":"General examination of patient"}],"text":"General examination of patient"}],"subject":{"reference":"urn:uuid:ex-pat"},"period":{"start":"2024-11-20T09:10:00+09:00","end":"2024-11-20T09:50:00+09:00"},"serviceProvider":{"display":"예시 병원"}}},{"fullUrl":"urn:uuid:ex-enc2","resource":{"resourceType":"Encounter","id":"ex-enc2","status":"finished","class":{"system":"http://terminology.hl7.org/CodeSystem/v3-ActCode","code":"EMER"},"type":[{"coding":[{"system":"http://snomed.info/sct","code":"50849002","display":"Emergency room admission"}],"text":"Emergency room admission"}],"subject":{"reference":"urn:uuid:ex-pat"},"period":{"start":"2025-09-15T22:05:00+09:00","end":"2025-09-16T01:30:00+09:00"},"serviceProvider":{"display":"예시 병원"}}},{"fullUrl":"urn:uuid:ex-enc3","resource":{"resourceType":"Encounter","id":"ex-enc3","status":"finished","class":{"system":"http://terminology.hl7.org/CodeSystem/v3-ActCode","code":"AMB"},"type":[{"coding":[{"system":"http://snomed.info/sct","code":"162673000","display":"General examination of patient"}],"text":"General examination of patient"}],"subject":{"reference":"urn:uuid:ex-pat"},"period":{"start":"2026-03-02T10:00:00+09:00","end":"2026-03-02T10:40:00+09:00"},"serviceProvider":{"display":"예시 병원"}}},{"fullUrl":"urn:uuid:ex-bp0","resource":{"resourceType":"Observation","id":"ex-bp0","status":"final","category":[{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/observation-category","code":"vital-signs","display":"Vital signs"}]}],"code":{"coding":[{"system":"http://loinc.org","code":"85354-9","display":"Blood pressure"}],"text":"Blood pressure"},"subject":{"reference":"urn:uuid:ex-pat"},"encounter":{"reference":"urn:uuid:ex-enc1"},"effectiveDateTime":"2024-11-20T09:10:00+09:00","component":[{"code":{"coding":[{"system":"http://loinc.org","code":"8480-6","display":"Systolic Blood Pressure"}],"text":"Systolic Blood Pressure"},"valueQuantity":{"value":128,"unit":"mm[Hg]","system":"http://unitsofmeasure.org","code":"mm[Hg]"}},{"code":{"coding":[{"system":"http://loinc.org","code":"8462-4","display":"Diastolic Blood Pressure"}],"text":"Diastolic Blood Pressure"},"valueQuantity":{"value":82,"unit":"mm[Hg]","system":"http://unitsofmeasure.org","code":"mm[Hg]"}}]}},{"fullUrl":"urn:uuid:ex-wt0","resource":{"resourceType":"Observation","id":"ex-wt0","status":"final","category":[{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/observation-category","code":"vital-signs","display":"Vital signs"}]}],"code":{"coding":[{"system":"http://loinc.org","code":"29463-7","display":"Body Weight"}],"text":"Body Weight"},"subject":{"reference":"urn:uuid:ex-pat"},"encounter":{"reference":"urn:uuid:ex-enc1"},"effectiveDateTime":"2024-11-20T09:10:00+09:00","valueQuantity":{"value":61.2,"unit":"kg","system":"http://unitsofmeasure.org","code":"kg"}}},{"fullUrl":"urn:uuid:ex-a1c0","resource":{"resourceType":"Observation","id":"ex-a1c0","status":"final","category":[{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/observation-category","code":"laboratory","display":"Laboratory"}]}],"code":{"coding":[{"system":"http://loinc.org","code":"4548-4","display":"Hemoglobin A1c"}],"text":"Hemoglobin A1c"},"subject":{"reference":"urn:uuid:ex-pat"},"encounter":{"reference":"urn:uuid:ex-enc1"},"effectiveDateTime":"2024-11-20T09:10:00+09:00","valueQuantity":{"value":6.1,"unit":"%","system":"http://unitsofmeasure.org","code":"%"}}},{"fullUrl":"urn:uuid:ex-bp1","resource":{"resourceType":"Observation","id":"ex-bp1","status":"final","category":[{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/observation-category","code":"vital-signs","display":"Vital signs"}]}],"code":{"coding":[{"system":"http://loinc.org","code":"85354-9","display":"Blood pressure"}],"text":"Blood pressure"},"subject":{"reference":"urn:uuid:ex-pat"},"encounter":{"reference":"urn:uuid:ex-enc2"},"effectiveDateTime":"2025-09-15T22:05:00+09:00","component":[{"code":{"coding":[{"system":"http://loinc.org","code":"8480-6","display":"Systolic Blood Pressure"}],"text":"Systolic Blood Pressure"},"valueQuantity":{"value":171,"unit":"mm[Hg]","system":"http://unitsofmeasure.org","code":"mm[Hg]"}},{"code":{"coding":[{"system":"http://loinc.org","code":"8462-4","display":"Diastolic Blood Pressure"}],"text":"Diastolic Blood Pressure"},"valueQuantity":{"value":98,"unit":"mm[Hg]","system":"http://unitsofmeasure.org","code":"mm[Hg]"}}]}},{"fullUrl":"urn:uuid:ex-wt1","resource":{"resourceType":"Observation","id":"ex-wt1","status":"final","category":[{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/observation-category","code":"vital-signs","display":"Vital signs"}]}],"code":{"coding":[{"system":"http://loinc.org","code":"29463-7","display":"Body Weight"}],"text":"Body Weight"},"subject":{"reference":"urn:uuid:ex-pat"},"encounter":{"reference":"urn:uuid:ex-enc2"},"effectiveDateTime":"2025-09-15T22:05:00+09:00","valueQuantity":{"value":62.0,"unit":"kg","system":"http://unitsofmeasure.org","code":"kg"}}},{"fullUrl":"urn:uuid:ex-a1c1","resource":{"resourceType":"Observation","id":"ex-a1c1","status":"final","category":[{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/observation-category","code":"laboratory","display":"Laboratory"}]}],"code":{"coding":[{"system":"http://loinc.org","code":"4548-4","display":"Hemoglobin A1c"}],"text":"Hemoglobin A1c"},"subject":{"reference":"urn:uuid:ex-pat"},"encounter":{"reference":"urn:uuid:ex-enc2"},"effectiveDateTime":"2025-09-15T22:05:00+09:00","valueQuantity":{"value":7.4,"unit":"%","system":"http://unitsofmeasure.org","code":"%"}}},{"fullUrl":"urn:uuid:ex-bp2","resource":{"resourceType":"Observation","id":"ex-bp2","status":"final","category":[{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/observation-category","code":"vital-signs","display":"Vital signs"}]}],"code":{"coding":[{"system":"http://loinc.org","code":"85354-9","display":"Blood pressure"}],"text":"Blood pressure"},"subject":{"reference":"urn:uuid:ex-pat"},"encounter":{"reference":"urn:uuid:ex-enc3"},"effectiveDateTime":"2026-03-02T10:00:00+09:00","component":[{"code":{"coding":[{"system":"http://loinc.org","code":"8480-6","display":"Systolic Blood Pressure"}],"text":"Systolic Blood Pressure"},"valueQuantity":{"value":138,"unit":"mm[Hg]","system":"http://unitsofmeasure.org","code":"mm[Hg]"}},{"code":{"coding":[{"system":"http://loinc.org","code":"8462-4","display":"Diastolic Blood Pressure"}],"text":"Diastolic Blood Pressure"},"valueQuantity":{"value":88,"unit":"mm[Hg]","system":"http://unitsofmeasure.org","code":"mm[Hg]"}}]}},{"fullUrl":"urn:uuid:ex-wt2","resource":{"resourceType":"Observation","id":"ex-wt2","status":"final","category":[{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/observation-category","code":"vital-signs","display":"Vital signs"}]}],"code":{"coding":[{"system":"http://loinc.org","code":"29463-7","display":"Body Weight"}],"text":"Body Weight"},"subject":{"reference":"urn:uuid:ex-pat"},"encounter":{"reference":"urn:uuid:ex-enc3"},"effectiveDateTime":"2026-03-02T10:00:00+09:00","valueQuantity":{"value":60.4,"unit":"kg","system":"http://unitsofmeasure.org","code":"kg"}}},{"fullUrl":"urn:uuid:ex-a1c2","resource":{"resourceType":"Observation","id":"ex-a1c2","status":"final","category":[{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/observation-category","code":"laboratory","display":"Laboratory"}]}],"code":{"coding":[{"system":"http://loinc.org","code":"4548-4","display":"Hemoglobin A1c"}],"text":"Hemoglobin A1c"},"subject":{"reference":"urn:uuid:ex-pat"},"encounter":{"reference":"urn:uuid:ex-enc3"},"effectiveDateTime":"2026-03-02T10:00:00+09:00","valueQuantity":{"value":6.6,"unit":"%","system":"http://unitsofmeasure.org","code":"%"}}},{"fullUrl":"urn:uuid:ex-c1","resource":{"resourceType":"Condition","id":"ex-c1","clinicalStatus":{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/condition-clinical","code":"active"}]},"code":{"coding":[{"system":"http://snomed.info/sct","code":"59621000","display":"Essential hypertension (disorder)"}],"text":"Essential hypertension (disorder)"},"subject":{"reference":"urn:uuid:ex-pat"},"encounter":{"reference":"urn:uuid:ex-enc1"},"onsetDateTime":"2024-11-20T09:10:00+09:00","recordedDate":"2024-11-20T09:10:00+09:00"}},{"fullUrl":"urn:uuid:ex-c2","resource":{"resourceType":"Condition","id":"ex-c2","clinicalStatus":{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/condition-clinical","code":"active"}]},"code":{"coding":[{"system":"http://snomed.info/sct","code":"44054006","display":"Diabetes mellitus type 2 (disorder)"}],"text":"Diabetes mellitus type 2 (disorder)"},"subject":{"reference":"urn:uuid:ex-pat"},"encounter":{"reference":"urn:uuid:ex-enc2"},"onsetDateTime":"2025-09-15T22:05:00+09:00","recordedDate":"2025-09-15T22:05:00+09:00"}},{"fullUrl":"urn:uuid:ex-m1","resource":{"resourceType":"MedicationRequest","id":"ex-m1","status":"active","intent":"order","medicationCodeableConcept":{"coding":[{"system":"http://www.nlm.nih.gov/research/umls/rxnorm","code":"860975","display":"metformin hydrochloride 500 MG Oral Tablet"}],"text":"metformin hydrochloride 500 MG Oral Tablet"},"subject":{"reference":"urn:uuid:ex-pat"},"encounter":{"reference":"urn:uuid:ex-enc2"},"authoredOn":"2025-09-15T22:05:00+09:00"}}]};
+const EXAMPLE={schema:"agent-log/v1",submitter:"예시",generated_at:"2026-11-04T12:57:15+09:00",
+  totals:{sessions:3,model_turns:1240,new_tokens:8204113,cache_read:251877302,subagent_types:{"general-purpose":2,"Explore":1}},
+  sessions:[
+    {session_id:"6cadfe20",title:"문서 작업",first:"2026-10-28T16:49:45+09:00",turns:696,tool_calls:397,top_tools:[["Bash",164],["Artifact",59],["Read",41]],cwd:"/Users/example"},
+    {session_id:"5fa989a9",title:"시나리오 검토",first:"2026-10-30T10:02:11+09:00",turns:402,tool_calls:210,top_tools:[["Read",88],["Edit",52]],cwd:"/Users/example/dev"},
+    {session_id:"91b0c3de",title:"데이터 정리",first:"2026-11-02T08:15:03+09:00",turns:142,tool_calls:77,top_tools:[["Bash",40]],cwd:"/Users/example/dev"}],
+  hours:{"2026-10-28 16":{new_tokens:302553,cache_read:3251371,model_turns:41},"2026-10-28 17":{new_tokens:118020,cache_read:2210388,model_turns:23},"2026-10-29 08":{new_tokens:90211,cache_read:1730022,model_turns:17}},
+  manual:null};
+let data,useTables=true,q="",reg=[];
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const isObj=v=>v!==null&&typeof v==="object"&&!Array.isArray(v);
+const isScalar=v=>v===null||typeof v!=="object";
+// 짧은 값 배열([["Bash",164]]의 안쪽 같은 것)은 한 줄로 보여 준다
+const isInline=v=>Array.isArray(v)&&v.length<=8&&v.every(isScalar)&&JSON.stringify(v).length<=80;
+const fmtBytes=n=>n<1024?n+" B":n<1048576?(n/1024).toFixed(1)+" KB":(n/1048576).toFixed(1)+" MB";
+const count=o=>isScalar(o)?1:1+Object.values(o).reduce((a,v)=>a+count(v),0);
+const summary=v=>Array.isArray(v)?`[${v.length}]`:`{${Object.keys(v).length}}`;
+const num=v=>Number.isInteger(v)&&Math.abs(v)>=10000?v.toLocaleString("en-US"):String(v);
+const scalarHtml=v=>v===null?`<span class="z">null</span>`:typeof v==="string"?`<span class="s">"${esc(v)}"</span>`:typeof v==="number"?`<span class="v" title="${v}">${num(v)}</span>`:`<span class="b">${v}</span>`;
+const inlineHtml=v=>`<span class="p">[</span>${v.map(scalarHtml).join(`<span class="p">, </span>`)}<span class="p">]</span>`;
+const childPath=(path,k,arr)=>arr?`${path}[${k}]`:/^[A-Za-z_$][\w$]*$/.test(k)?`${path}.${k}`:`${path}[${JSON.stringify(k)}]`;
+// 표 칸에 넣을 중첩값 미리보기
+const brief=x=>isScalar(x)?String(x):isInline(x)?x.join(" "):summary(x);
+const preview=v=>{const s=(Array.isArray(v)?v.map(brief):Object.entries(v).map(([k,x])=>`${k} ${brief(x)}`)).join(", ");return s.length>80?s.slice(0,79)+"…":s};
+const deepMatch=(k,v)=>matches(k,v)||(!isScalar(v)&&Object.entries(v).some(([ck,x])=>deepMatch(Array.isArray(v)?null:ck,x)));
+const matches=(k,v)=>{if(!q)return false;const s=q.toLowerCase();return(k!=null&&String(k).toLowerCase().includes(s))||(isScalar(v)&&String(v).toLowerCase().includes(s))};
+
+// 표로 그릴 수 있으면 {cols,rows}. 객체 배열, 객체를 값으로 갖는 객체, 길이가 같은 값 배열의 배열이 대상이다
+function tableOf(v){
+  const arr=Array.isArray(v),ents=arr?v.map((x,i)=>[i,x]):Object.entries(v);
+  if(ents.length<2)return null;
+  if(ents.every(([,x])=>isObj(x))){
+    const cols=[...new Set(ents.flatMap(([,x])=>Object.keys(x)))];
+    if(cols.length>40)return null;
+    const flat=cols.filter(c=>ents.every(([,x])=>!(c in x)||isScalar(x[c])||isInline(x[c])));
+    return flat.length*2>=cols.length?{cols,rows:ents,arr}:null;
+  }
+  if(arr&&v.every(isInline)&&v.every(x=>x.length===v[0].length)&&v[0].length>1)return{cols:v[0].map((_,i)=>i),rows:ents,arr};
+  // 값이 대부분 숫자인 객체는 키와 값 두 열짜리 표로 만들어 막대를 깐다
+  const nums=ents.filter(([,x])=>typeof x==="number").length;
+  if(!arr&&ents.length>=3&&nums>=ents.length*0.6)return{cols:["값"],rows:ents.map(([k,x])=>[k,{"값":x}]),arr,kv:true};
+  return null;
+}
+/* 큰 파일 대비: 접힌 곳은 펼칠 때 그리고, 배열과 표는 한 번에 PAGE개씩 끊는다. PAGE는 사용자가 고르고 이 브라우저에 기억한다 */
+// 2000이 최대: 열 6개 표 2000행을 그리는 데 약 0.6초 걸린다. 3000행부터는 0.9초를 넘어 멈칫한다
+const PAGES=[200,500,1000,2000],lazy=[],more=new Map();
+let PAGE=500;try{const v=+localStorage.getItem("json-page");if(PAGES.includes(v))PAGE=v}catch(e){}
+let hitMemo=new WeakMap();
+// 이 값 아래 어딘가에 검색어가 있나. 객체마다 한 번만 센다
+function containsHit(v){if(!q||isScalar(v))return false;if(hitMemo.has(v))return hitMemo.get(v);let r=false;const arr=Array.isArray(v);for(const k in v){const x=v[k];if(matches(arr?null:k,x)||containsHit(x)){r=true;break}}hitMemo.set(v,r);return r}
+const moreBtn=(path,left,unit)=>`<button class="morebtn" data-more="${esc(path)}">${left.toLocaleString()}${unit} 더 보기</button>`;
+function kidsHtml(v,path,depth,t){
+  if(t)return tableHtml(t,path);
+  const arr=Array.isArray(v);let ents=arr?v.map((x,i)=>[String(i),x]):Object.entries(v);
+  const lim=more.get(path)||PAGE;
+  if(q&&ents.length>lim)ents=ents.filter(([k,x])=>matches(arr?null:k,x)||containsHit(x));
+  const many=arr&&ents.length>50;
+  return ents.slice(0,lim).map(([k,x])=>node(k,x,arr?`${path}[${k}]`:childPath(path,k,false),depth+1,arr,many)).join("")+(ents.length>lim?moreBtn(path,ents.length-lim,"개"):"");
+}
+const fillKids=n=>{const k=n.querySelector(":scope>.kids");if(k&&!k.childElementCount&&n.dataset.lz){const[v,p,d,t]=lazy[+n.dataset.lz];k.innerHTML=kidsHtml(v,p,d,t)}};
+function tableHtml(t,path){
+  const numCol=t.cols.map(c=>t.rows.every(([,x])=>x[c]==null||typeof x[c]==="number"));
+  // 숫자 열마다 최댓값을 기준으로 칸 배경에 막대를 깐다
+  const colMax=t.cols.map(c=>t.rows.reduce((m,[,x])=>typeof x[c]==="number"?Math.max(m,Math.abs(x[c])):m,0));
+  const head=`<tr><th class="rk">${t.arr?"#":"키"}</th>${t.cols.map((c,j)=>`<th class="${numCol[j]?"r":""} ${matches(c)?"hit":""}">${esc(c)}</th>`).join("")}</tr>`;
+  const lim=more.get(path)||PAGE;let rows=t.rows;
+  if(q&&rows.length>lim)rows=rows.filter(([rk,x])=>(!t.arr&&matches(rk))||containsHit(x));
+  const left=rows.length-lim;rows=rows.slice(0,lim);
+  const body=rows.map(([rk,x])=>{
+    const rp=childPath(path,rk,t.arr),opened=[];
+    return `<tr data-p="${esc(rp)}"><td class="rk ${!t.arr&&matches(rk)?"hit":""}">${esc(rk)}</td>${t.cols.map((c,j)=>{
+      const v=x[c],cp=t.kv?rp:childPath(rp,String(c),Array.isArray(x));
+      if(v===undefined)return `<td></td>`;
+      if(typeof v==="number"&&colMax[j]>0)return `<td class="r db ${matches(null,v)?"hit":""}" style="--p:${(Math.abs(v)/colMax[j]*100).toFixed(1)}%" title="${esc(v)}" data-p="${esc(cp)}">${scalarHtml(v)}</td>`;
+      if(isScalar(v))return `<td class="${numCol[j]?"r":""} ${matches(null,v)?"hit":""}" title="${esc(v)}" data-p="${esc(cp)}">${scalarHtml(v)}</td>`;
+      if(isInline(v))return `<td data-p="${esc(cp)}" class="${v.some(e=>matches(null,e))?"hit":""}">${inlineHtml(v)}</td>`;
+      reg.push([v,cp,String(c)]);const id=reg.length-1,auto=q&&deepMatch(null,v);if(auto)opened.push(id);
+      return `<td data-p="${esc(cp)}"><button class="sub ${auto?"on":""}" data-sub="${id}" title="이 행 아래에 펼친다"><span class="c">${summary(v)}</span>${esc(preview(v))}</button></td>`;
+    }).join("")}</tr>${opened.length?`<tr class="subrow"><td colspan="${t.cols.length+1}">${opened.map(subHtml).join("")}</td></tr>`:""}`}).join("");
+  return `<div class="tblwrap"><table><thead>${head}</thead><tbody>${body}${left>0?`<tr><td colspan="${t.cols.length+1}">${moreBtn(path,left,"행")}</td></tr>`:""}</tbody></table></div>`;
+}
+const subHtml=id=>{const[v,p,c]=reg[id];return `<div data-sub="${id}">${node(c,v,p,0,false)}</div>`};
+// 배열 항목 이름표: FHIR면 리소스 종류, 아니면 title, name, id 중 처음 있는 글자
+const itemTag=v=>{if(!isObj(v))return"";const rt=v.resourceType||v.resource?.resourceType;if(rt)return `<em class="itag">${esc(T[rt]?T[rt]+" ":"")}${esc(rt)}</em>`;
+  const k=["title","name","id","key","label"].find(k=>typeof v[k]==="string"||typeof v[k]==="number");return k?`<em class="itag">${esc(cut(String(v[k]),40))}</em>`:""};
+// many: 항목이 많은 배열의 항목이면 자동으로 펼치지 않는다
+function node(key,v,path,depth,idx,many){
+  const hit=matches(key,v);
+  const kh=key===null?"":`<span class="k ${idx?"i":""}">${esc(key)}</span><span class="p">:</span>`;
+  const cp=`<button class="cp" data-cp="${esc(path)}">경로 복사</button>`;
+  if(isScalar(v)||isInline(v)){
+    const ih=isInline(v)&&v.some(e=>matches(null,e));
+    return `<div class="n" data-p="${esc(path)}"><div class="l ${hit||ih?"hit":""}"><span class="tg"></span>${kh}${key==="reference"&&typeof v==="string"&&fx?.byId.has(rid(v))?`<button class="refl" data-ref="${esc(rid(v))}" title="이 리소스로 이동">${scalarHtml(v)}</button>`:isScalar(v)?scalarHtml(v):inlineHtml(v)}${cp}</div></div>`;
+  }
+  const arr=Array.isArray(v),n=arr?v.length:Object.keys(v).length;
+  const t=useTables?tableOf(v):null;
+  const open=n&&((depth<2&&!many)||containsHit(v)),id=lazy.push([v,path,depth,t])-1;
+  return `<div class="n c ${open?"open":""}" data-p="${esc(path)}" data-lz="${id}"><div class="l ${hit?"hit":""}"><span class="tg"></span>${kh}<span class="sum">${summary(v)}${t?`<em>표 ${t.rows.length}×${t.cols.length}</em>`:""}${idx?itemTag(v):""}</span>${cp}</div><div class="kids">${open?kidsHtml(v,path,depth,t):""}</div></div>`;
+}
+/* FHIR Bundle 보기. 리소스를 방문(Encounter)별로 묶고, 깊은 구조는 한 줄로 줄인다 */
+let fx=null,mode="tl",menu="table",ftype="",fcount=0;
+const T={Patient:"환자",Encounter:"방문",Condition:"진단",AllergyIntolerance:"알레르기",Observation:"검사",Procedure:"처치",MedicationRequest:"처방",MedicationAdministration:"투약",MedicationStatement:"복용",Medication:"약",Immunization:"접종",DiagnosticReport:"보고서",ImagingStudy:"영상",CarePlan:"치료 계획",CareTeam:"진료팀",Device:"기기",SupplyDelivery:"물품",DocumentReference:"문서",Claim:"청구",ExplanationOfBenefit:"급여 내역",Provenance:"출처",Organization:"기관",Practitioner:"의료진",Location:"장소",ServiceRequest:"의뢰",Goal:"목표",Specimen:"검체",Coverage:"보험",QuestionnaireResponse:"설문 응답",Questionnaire:"설문",RelatedPerson:"관계인",FamilyMemberHistory:"가족력",Composition:"문서 구성",PractitionerRole:"의료진 역할",Appointment:"예약",Media:"미디어",Binary:"파일",Consent:"동의",EpisodeOfCare:"치료 에피소드",Communication:"연락"};
+const ORDER=["Encounter","Condition","AllergyIntolerance","Observation","Procedure","MedicationRequest","MedicationAdministration","Immunization","DiagnosticReport","ImagingStudy","CarePlan","CareTeam","Device","SupplyDelivery","DocumentReference","Claim","ExplanationOfBenefit"];
+const ADMIN=new Set(["DocumentReference","Claim","ExplanationOfBenefit","Provenance"]);
+const CLS={AMB:"외래",EMER:"응급",IMP:"입원",ACUTE:"입원",WELLNESS:"검진",VR:"원격",HH:"방문진료",OBSENC:"관찰"};
+const rank=t=>{const i=ORDER.indexOf(t);return i<0?50:i};
+const cc=x=>x&&(x.text||x.coding?.find(c=>c.display)?.display||x.coding?.[0]?.code)||"";
+const day=s=>s?String(s).slice(0,10):"";
+const rid=s=>String(s||"").replace(/^urn:uuid:/,"").replace(/^[A-Za-z]+\//,"");
+const when=r=>r.effectiveDateTime||r.effectivePeriod?.start||r.performedDateTime||r.performedPeriod?.start||r.occurrenceDateTime||r.authoredOn||r.onsetDateTime||r.recordedDate||r.period?.start||r.started||r.date||r.created||r.billablePeriod?.start||r.issued||"";
+const qty=v=>v.value==null?"":`${Math.round(v.value*100)/100}${v.unit?" "+v.unit:""}`;
+// 혈압은 수축기/이완기 한 값으로 쓴다 (LOINC 8480-6, 8462-4)
+const bpPart=(r,code)=>r.component?.find(c=>c.code?.coding?.some(k=>k.code===code))?.valueQuantity;
+const val=r=>{const sy=bpPart(r,"8480-6"),di=bpPart(r,"8462-4");
+  if(sy&&di)return `${Math.round(sy.value)}/${Math.round(di.value)} ${sy.unit||""}`.trim();
+  if(r.valueQuantity)return qty(r.valueQuantity);if(r.valueCodeableConcept)return cc(r.valueCodeableConcept);
+  for(const k of["valueString","valueInteger","valueBoolean","valueDateTime"])if(r[k]!=null)return String(r[k]);
+  if(r.component)return r.component.map(c=>`${cc(c.code).replace(/ blood pressure$/i,"")} ${val(c)}`).join(", ");return""};
+const encOf=r=>rid(r.encounter?.reference||r.context?.reference||r.context?.encounter?.[0]?.reference||r.item?.[0]?.encounter?.[0]?.reference);
+const pname=p=>{const n=p.name?.find(n=>n.use==="official")||p.name?.[0];return n?(n.text||[...(n.prefix||[]),...(n.given||[]),n.family].filter(Boolean).join(" ")):p.id};
+const medName=r=>cc(r.medicationCodeableConcept)||cc(fx.byId.get(rid(r.medicationReference?.reference))?.code)||r.medicationReference?.display||"";
+const money=m=>m?.value==null?"":`${Math.round(m.value*100)/100} ${m.currency||""}`.trim();
+function what(r){switch(r.resourceType){
+  case"MedicationRequest":case"MedicationAdministration":case"MedicationStatement":return medName(r);
+  case"Immunization":return cc(r.vaccineCode);
+  case"DocumentReference":return cc(r.type);
+  case"ImagingStudy":return cc(r.procedureCode?.[0])||r.series?.[0]?.modality?.display||"";
+  case"Claim":case"ExplanationOfBenefit":return `${cc(r.type)} ${r.item?.length||0}항목`;
+  case"CarePlan":return r.category?.map(cc).filter(Boolean).at(-1)||"";
+  case"CareTeam":return(r.participant||[]).map(p=>p.member?.display).filter(Boolean).join(", ");
+  case"Device":return cc(r.type);
+  case"SupplyDelivery":return cc(r.suppliedItem?.itemCodeableConcept);
+  case"Encounter":return cc(r.type?.[0]);
+  case"Patient":return pname(r);
+  case"Observation":return cc(r.code).replace(/ panel with all children optional$/i,"");
+  default:return cc(r.code)||cc(r.type)||""}}
+function extra(r){switch(r.resourceType){
+  case"Observation":return val(r);
+  case"Condition":return r.abatementDateTime?`${day(r.abatementDateTime)} 해소`:cc(r.clinicalStatus);
+  case"Claim":return money(r.total);
+  case"ExplanationOfBenefit":return r.payment?.amount?`지급 ${money(r.payment.amount)}`:money(r.total?.[0]?.amount);
+  case"DiagnosticReport":return r.result?.length?`결과 ${r.result.length}개`:"";
+  default:return r.status&&!["completed","final","finished","active","available"].includes(r.status)?r.status:""}}
+const patOf=r=>rid(r.subject?.reference||r.patient?.reference||r.beneficiary?.reference);
+// 환자가 여러 명이면 고른 환자의 리소스와 환자를 가리키지 않는 공용 리소스(Medication, Organization 등)만 남긴다
+function indexBundle(b,pid){
+  let all=(b.entry||[]).map((e,i)=>({r:e.resource,i})).filter(x=>isObj(x.r));
+  const patients=all.filter(x=>x.r.resourceType==="Patient").map(x=>x.r);
+  if(patients.length>1){pid??=patients[0].id;all=all.filter(x=>x.r.resourceType==="Patient"?x.r.id===pid:!patOf(x.r)||patOf(x.r)===pid)}
+  const byId=new Map(all.map(x=>[x.r.id,x.r]));
+  const enc=new Map(all.filter(x=>x.r.resourceType==="Encounter").map(x=>[x.r.id,{...x,kids:[]}]));
+  const loose=[];
+  for(const x of all){if(x.r.resourceType==="Encounter")continue;const e=enc.get(encOf(x.r));(e?e.kids:loose).push(x)}
+  // encounter 참조가 없어도 시각이 어떤 방문 시간 안에 들면 그 방문에 넣는다 (Synthea 샘플 SupplyDelivery 2,507개 모두 해당)
+  const ms=s=>s?Date.parse(s):NaN,encs=[...enc.values()];
+  for(let k=loose.length-1;k>=0;k--){
+    const x=loose[k],t=ms(when(x.r));if(isNaN(t)||x.r.resourceType==="Patient")continue;
+    const e=encs.find(e=>ms(e.r.period?.start)<=t&&t<=(ms(e.r.period?.end)||ms(e.r.period?.start)));
+    if(e){e.kids.push({...x,inf:true});loose.splice(k,1)}
+  }
+  return{all,byId,loose,patients,pid,enc:[...enc.values()].sort((a,b)=>when(b.r).localeCompare(when(a.r))),patient:all.find(x=>x.r.resourceType==="Patient")?.r};
+}
+const fm=x=>!q||`${T[x.r.resourceType]||""} ${x.r.resourceType} ${what(x.r)} ${extra(x.r)} ${day(when(x.r))}`.toLowerCase().includes(q.toLowerCase());
+const line=(x,d)=>`<div class="ln ${d?"d":""} ${ADMIN.has(x.r.resourceType)?"adm":""} ${focus.res===x.r.id?"focus":""}" data-raw="${x.i}"><span class="lb t-${esc(x.r.resourceType)}">${esc(T[x.r.resourceType]||x.r.resourceType)}</span>${d?`<span class="dt">${day(when(x.r))}</span>`:""}<span class="wt">${esc(what(x.r))||"<i>(이름 없음)</i>"}${x.inf?`<span class="inf" title="encounter 참조가 없어서 방문 시간으로 연결했다">시간 기준</span>`:""}</span><span class="ex" title="${esc(extra(x.r))}">${esc(cut(extra(x.r),60))}</span></div>`;
+const cut=(s,n)=>s.length>n?s.slice(0,n-1)+"…":s;
+const spark=vs=>{if(vs.length<2)return"";const mn=Math.min(...vs),mx=Math.max(...vs),w=84,h=18,sx=i=>2+i*(w-4)/(vs.length-1),sy=v=>mx===mn?h/2:h-2-(v-mn)*(h-4)/(mx-mn);
+  // 칸 폭에 맞춰 늘어나도록 비율을 고정하지 않는다. 선 굵기는 그대로 둔다
+  return `<svg class="spk" width="100%" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polyline points="${vs.map((v,i)=>`${sx(i).toFixed(1)},${sy(v).toFixed(1)}`).join(" ")}" fill="none" stroke="currentColor" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg>`};
+function ptHtml(){
+  const p=fx.patient;if(!p)return"";
+  const of=t=>fx.all.filter(x=>x.r.resourceType===t).map(x=>x.r),uniq=a=>[...new Set(a.filter(Boolean))];
+  const end=p.deceasedDateTime?new Date(p.deceasedDateTime):new Date();
+  const age=p.birthDate?Math.floor((end-new Date(p.birthDate))/31557600000)+"세":"";
+  const act=uniq(of("Condition").filter(r=>cc(r.clinicalStatus)==="active"&&!r.abatementDateTime).map(what));
+  // Synthea는 학력, 고용 같은 생활 상태도 Condition으로 넣는다. (finding) (situation) 꼬리표로 나눈다
+  const life=act.filter(s=>/\((finding|situation)\)$/.test(s)),dis=act.filter(s=>!life.includes(s));
+  const meds=uniq(of("MedicationRequest").filter(r=>r.status==="active").map(what));
+  const alg=uniq(of("AllergyIntolerance").map(what));
+  const vit=new Map();of("Observation").filter(r=>r.category?.some(c=>c.coding?.some(k=>k.code==="vital-signs"))).sort((a,b)=>when(b).localeCompare(when(a))).forEach(r=>{if(!vit.has(what(r)))vit.set(what(r),r)});
+  const ds=fx.enc.map(e=>day(when(e.r))),addr=p.address?.[0];
+  const first=new Map();[...fx.all].map(x=>x.r).sort((a,b)=>when(a).localeCompare(when(b))).forEach(r=>{const k=r.resourceType+"|"+what(r);if(!first.has(k))first.set(k,r)});
+  const go=(t,s)=>{const r=first.get(t+"|"+s);if(!r)return esc(s);const en=encOf(r);return en&&fx.byId.has(en)?`<button class="pl" data-goenc="${esc(en)}" data-gores="${esc(r.id)}" title="처음 나온 방문으로 간다">${esc(s)}</button>`:`<button class="pl" data-ref="${esc(r.id)}">${esc(s)}</button>`};
+  const list=(h,a,t)=>`<div class="pc"><h3>${h}<i>${a.length}</i></h3>${a.length?`<ul>${a.map(s=>`<li>${t?go(t,s):esc(s)}</li>`).join("")}</ul>`:`<p class="none">없음</p>`}</div>`;
+  const pp=fx.patients.length>1?`<label class="pp">이 Bundle의 환자 ${fx.patients.length}명 <select data-pat aria-label="환자 고르기">${fx.patients.map(x=>`<option value="${esc(x.id)}" ${x.id===fx.pid?"selected":""}>${esc(pname(x))}</option>`).join("")}</select></label>`:"";
+  return `<section class="pt">${pp}<div class="ph"><b>${esc(pname(p))}</b><span>${p.gender==="male"?"남":p.gender==="female"?"여":esc(p.gender||"")}</span><span>${esc(p.birthDate||"")} 생 ${age}${p.deceasedDateTime?`, ${day(p.deceasedDateTime)} 사망`:""}</span><span>${esc([addr?.city,addr?.state].filter(Boolean).join(", "))}</span><span>방문 ${fx.enc.length}회${ds.length?`, ${ds.at(-1)} ~ ${ds[0]}`:""}</span></div>
+    <div class="pg">${list("진단 중인 병",dis,"Condition")}${list("복용 중인 약",meds,"MedicationRequest")}${alg.length?list("알레르기",alg,"AllergyIntolerance"):""}<div class="pc"><h3>최근 활력징후</h3>${vit.size?`<dl>${[...vit].map(([k,r])=>`<dt title="${esc(k)}"><button class="pl" data-goobs="${esc(k)}" title="검사 추이에서 연다">${esc(k)}</button></dt><dd>${esc(val(r))}</dd><dd class="d">${day(when(r))}</dd>`).join("")}</dl>`:`<p class="none">없음</p>`}</div>${life.length?list("생활 상태",life,"Condition"):""}</div></section>`;
+}
+const navHtml=(list,cur=mode)=>`<nav class="modes">${list.map(([m,l,n])=>`<button data-mode="${m}" class="${cur===m?"on":""}">${l}${n?`<i>${n}</i>`:""}</button>`).join("")}</nav>`;
+const tabsHtml=()=>navHtml([["tl","방문 타임라인",fx.enc.length+"회"],["obs","검사 추이",""],["type","종류별",fx.all.length+"개"]]);
+
+function tlHtml(){
+  const sec=(e,first)=>{
+    const kids=[...e.kids].sort((a,b)=>rank(a.r.resourceType)-rank(b.r.resourceType)||when(a.r).localeCompare(when(b.r)));
+    const eh=q&&fm(e),shown=q&&!eh?kids.filter(fm):kids;
+    if(q&&!eh&&!shown.length)return"";
+    if(q)fcount+=(eh?1:0)+shown.filter(fm).length;
+    const n={};kids.forEach(x=>{if(!ADMIN.has(x.r.resourceType))n[x.r.resourceType]=(n[x.r.resourceType]||0)+1});
+    const cnt=Object.keys(n).sort((a,b)=>rank(a)-rank(b)).map(t=>`${T[t]||t} ${n[t]}`).join("  ");
+    const c=e.r.class?.code||"",rs=(e.r.reasonCode||[]).map(cc).filter(Boolean).join(", ");
+    const clin=shown.filter(x=>!ADMIN.has(x.r.resourceType)),adm=shown.filter(x=>ADMIN.has(x.r.resourceType));
+    return `<details class="enc" data-enc="${esc(e.r.id)}" ${q||first||focus.enc===e.r.id?"open":""}><summary><span class="dt">${day(when(e.r)).slice(5)}</span><span class="cls c-${esc(c)}">${esc(CLS[c]||c)}</span><span class="ty">${esc(what(e.r).replace(/ \(procedure\)$/,""))}</span>${rs?`<span class="rs">사유: ${esc(rs)}</span>`:""}<span class="who">${esc(e.r.serviceProvider?.display||"")}</span><span class="cnt">${cnt}</span></summary><div class="lns">${line(e)}${clin.map(x=>line(x)).join("")}${adm.length?`<div class="sep">문서와 청구</div>${adm.map(x=>line(x)).join("")}`:""}</div></details>`};
+  const loose=fx.loose.filter(x=>x.r.resourceType!=="Patient").filter(fm);if(q)fcount+=loose.length;
+  // 연도가 바뀔 때마다 머리줄을 넣는다
+  const perYear={};fx.enc.forEach(e=>{const y=day(when(e.r)).slice(0,4);perYear[y]=(perYear[y]||0)+1});
+  let yr="";const body=fx.enc.map((e,i)=>{const s=sec(e,i===0);if(!s)return"";const y=day(when(e.r)).slice(0,4);const h=y!==yr?`<div class="yr">${y}<i>${perYear[y]}회</i></div>`:"";yr=y;return h+s}).join("");
+  return `<div class="tl">`+(body||`<div class="empty">검색어에 맞는 방문 기록이 없다.</div>`)+(loose.length?`<details class="enc" ${q?"open":""}><summary><span class="ty">방문과 연결 안 된 기록</span><span class="cnt">${loose.length}개</span></summary><div class="lns">${loose.map(x=>line(x,true)).join("")}</div></details>`:"")+`</div>`;
+}
+function obsHtml(){
+  const g=new Map();for(const x of fx.all)if(x.r.resourceType==="Observation"){const k=what(x.r);if(!g.has(k))g.set(k,[]);g.get(k).push(x)}
+  const CAT={"vital-signs":0,laboratory:1};
+  const rows=[...g].map(([k,xs])=>({k,xs:xs.sort((a,b)=>when(b.r).localeCompare(when(a.r))),cat:xs[0].r.category?.[0]?.coding?.[0]?.code||""}))
+    .filter(o=>!q||o.k.toLowerCase().includes(q.toLowerCase())).sort((a,b)=>(CAT[a.cat]??2)-(CAT[b.cat]??2)||a.k.localeCompare(b.k));
+  fcount=rows.length;
+  if(!rows.length)return `<div class="empty">${g.size?"검색어에 맞는 검사 항목이 없다.":"이 파일에는 검사(Observation)가 없다."}</div>`;
+  return `<div class="obs"><div class="oh"><span>항목</span><span>분류</span><span class="r">횟수</span><span class="r">최근 값</span><span>최근 날짜</span><span>추이</span></div>${rows.map(o=>{
+    const nums=o.xs.map(x=>x.r.valueQuantity?.value??bpPart(x.r,"8480-6")?.value).filter(v=>typeof v==="number").reverse();
+    return `<details data-obs="${esc(o.k)}" ${obsFocus===o.k?"open":""}><summary class="orow"><span class="wt">${esc(o.k)}</span><span class="ca">${esc(cc(o.xs[0].r.category?.[0]))}</span><span class="r">${o.xs.length}</span><span class="r v" title="${esc(val(o.xs[0].r))}">${esc(cut(val(o.xs[0].r),40))}</span><span class="dt">${day(when(o.xs[0].r))}</span><span>${spark(nums)}</span></summary><div class="lns">${o.xs.map(x=>`<div class="ln d" data-raw="${x.i}"><span class="lb"></span><span class="dt">${day(when(x.r))}</span><span class="wt t-Observation">${esc(cut(val(x.r),120))}</span><span class="ex"></span></div>`).join("")}</div></details>`}).join("")}</div>`;
+}
+function typesHtml(){
+  const g={};fx.all.forEach(x=>(g[x.r.resourceType]??=[]).push(x));
+  const ts=Object.keys(g).sort((a,b)=>rank(a)-rank(b)||a.localeCompare(b));
+  if(!g[ftype])ftype=g.Condition?"Condition":ts[0];
+  const xs=g[ftype].filter(fm).sort((a,b)=>when(b.r).localeCompare(when(a.r)));fcount=xs.length;
+  return `<div class="tl"><div class="chips">${ts.map(t=>`<button class="chip ${t===ftype?"on":""}" data-type="${esc(t)}">${esc(T[t]||t)}<i>${esc(t)}</i><b>${g[t].length}</b></button>`).join("")}</div><div class="lns">${xs.map(x=>line(x,true)).join("")||`<div class="empty">검색어에 맞는 기록이 없다.</div>`}</div></div>`;
+}
+/* 데이터 점검. 여러 FHIR 파일을 하나씩 읽어 통계만 남기고 원본은 버린다 */
+let scan=null,checkOpen={},parsed=null;
+const SYS={"http://snomed.info/sct":"SNOMED CT","http://loinc.org":"LOINC","http://www.nlm.nih.gov/research/umls/rxnorm":"RxNorm","http://hl7.org/fhir/sid/cvx":"CVX","http://hl7.org/fhir/sid/icd-10-cm":"ICD-10-CM","http://hl7.org/fhir/sid/icd-10":"ICD-10","http://www.ama-assn.org/go/cpt":"CPT","http://unitsofmeasure.org":"UCUM"};
+const sysName=s=>SYS[s]||s.replace(/^https?:\/\/(www\.)?/,"");
+const walkRes=(o,cb)=>{if(Array.isArray(o))o.forEach(x=>walkRes(x,cb));else if(o&&typeof o==="object"){cb(o);for(const k in o)walkRes(o[k],cb)}};
+async function scanAll(){
+  const s={ok:0,bad:[],noPat:[],miss:{},pats:[],typeN:{},codes:new Map(),broken:[],cond:0,ext:0,total:0,bytes:0};
+  for(let i=0;i<files.length;i++){
+    $("#view").innerHTML=`<div class="empty">파일을 읽는 중이다. ${i+1} / ${files.length}</div>`;
+    await new Promise(r=>setTimeout(r));
+    s.bytes+=files[i].size;
+    // 앞 64KB에 Bundle 표시가 없으면 FHIR가 아니라고 보고 전체를 읽지 않는다
+    if(!/"resourceType"\s*:\s*"Bundle"/.test(await files[i].slice(0,65536).text())){s.bad.push([i,"FHIR Bundle이 아니다"]);continue}
+    let b,t;try{t=await files[i].text();b=JSON.parse(t)}catch(e){s.bad.push([i,"JSON으로 읽지 못했다"]);continue}
+    if(files.length===1)parsed={i,t,v:b};
+    if(!isObj(b)||b.resourceType!=="Bundle"){s.bad.push([i,"FHIR Bundle이 아니다"]);continue}
+    s.ok++;
+    const ents=(b.entry||[]).filter(e=>isObj(e.resource)),ids=new Set(),pm=new Map();
+    ents.forEach(e=>{const r=e.resource;if(e.fullUrl)ids.add(e.fullUrl);if(r.id){ids.add("urn:uuid:"+r.id);ids.add(r.resourceType+"/"+r.id)}
+      if(r.resourceType==="Patient"){const o={file:i,pid:r.id,name:pname(r),gender:r.gender,birth:r.birthDate,dead:r.deceasedDateTime,types:{},enc:0,total:0,broken:0};pm.set(r.id,o);s.pats.push(o)}});
+    if(!pm.size){const c={};ents.forEach(e=>c[e.resource.resourceType]=(c[e.resource.resourceType]||0)+1);s.noPat.push([i,ents.length,Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([t,n])=>`${t} ${n}`).join(", ")])}
+    for(const{resource:r}of ents){
+      const t=r.resourceType,po=t==="Patient"?pm.get(r.id):pm.get(patOf(r));
+      s.total++;s.typeN[t]=(s.typeN[t]||0)+1;
+      if(po){po.types[t]=(po.types[t]||0)+1;po.total++;if(t==="Encounter")po.enc++}
+      walkRes(r,o=>{
+        if(typeof o.reference==="string"){const f=o.reference;
+          if(f.startsWith("#"));else if(f.includes("?"))s.cond++;else if(/^https?:/.test(f))s.ext++;else if(!ids.has(f)){s.broken.push({file:i,type:t,ref:f});if(po)po.broken++}}
+        // 숫자 값이 있는 것은 단위(Quantity)라서 코드로 세지 않는다
+        if(typeof o.system==="string"&&(typeof o.code==="string"||typeof o.code==="number")&&typeof o.value!=="number"){
+          let m=s.codes.get(o.system);if(!m)s.codes.set(o.system,m=new Map());
+          const k=String(o.code);let c=m.get(k);if(!c)m.set(k,c={d:"",n:0,pats:new Set(),types:new Set()});
+          c.n++;c.types.add(t);if(po)c.pats.add(po);if(!c.d&&o.display)c.d=o.display}
+      });
+      for(const[f,src,ok]of reqCheck(r))if(!ok){const k=`${t}|${f}|${src}`;s.miss[k]=(s.miss[k]||0)+1}
+    }
+  }
+  return s;
+}
+const pct=(v,mx)=>`style="--p:${mx?(v/mx*100).toFixed(1):0}%"`;
+const ageOf=p=>p.birth?Math.floor(((p.dead?Date.parse(p.dead):Date.now())-Date.parse(p.birth))/31557600000):"";
+const pbtn=p=>`<button class="pl" data-open="${p.file}" data-pid="${esc(p.pid)}">${esc(p.name)}</button>`;
+const plist=(ps,n=80)=>ps.slice(0,n).map(pbtn).join("")+(ps.length>n?`<p class="more">외 ${ps.length-n}명</p>`:"");
+function codeRows(list,N,showSys){
+  const cols=showSys?6:5;
+  return list.map(([sys,code,c])=>{const key=JSON.stringify([sys,code]);
+    return `<tr class="ck-row" data-ccode="${esc(key)}">${showSys?`<td>${esc(sysName(sys))}</td>`:""}<td class="k">${esc(code)}</td><td class="nm" title="${esc(c.d)}">${esc(c.d)}</td><td class="r db" ${pct(c.pats.size,N)}>${c.pats.size}</td><td class="r">${c.n.toLocaleString()}</td><td class="dm">${esc([...c.types].map(t=>T[t]||t).join(", "))}</td></tr>${checkOpen.code===key?`<tr class="subrow"><td colspan="${cols}">${c.pats.size?plist([...c.pats]):"<span class='dm'>환자를 가리키지 않는 리소스에서만 쓰였다</span>"}</td></tr>`:""}`}).join("");
+}
+function checkHtml(){
+  const s=scan,N=s.pats.length,ql=q.toLowerCase(),has=x=>!q||x.toLowerCase().includes(ql);
+  const sum=[["파일",files.length],["FHIR Bundle",s.ok],["환자",N],["리소스",s.total],["방문",s.pats.reduce((a,p)=>a+p.enc,0)],["깨진 참조",s.broken.length],["읽지 못한 파일",s.bad.length],["환자 없는 Bundle",s.noPat.length],["필수 필드 빠짐",Object.values(s.miss).reduce((a,n)=>a+n,0)]];
+  const JUMP={"깨진 참조":"#ck-ref","읽지 못한 파일":"#ck-bad","환자 없는 Bundle":"#ck-nopat","필수 필드 빠짐":"#ck-miss"};
+  let out=`<dl class="ck-sum">${sum.map(([k,v],j)=>{const inner=`<dt>${k}</dt><dd class="${(j===5||j===6||j===8)&&v?"warn":""}">${v.toLocaleString()}</dd>`;return JUMP[k]&&v?`<button class="ck-j" data-jump="${JUMP[k]}" title="아래 목록으로 간다">${inner}</button>`:`<div>${inner}</div>`}).join("")}</dl>`;
+  // 리소스 종류
+  const ts=Object.keys(s.typeN).filter(t=>has(`${t} ${T[t]||""}`)).sort((a,b)=>rank(a)-rank(b)||a.localeCompare(b));
+  const mxN=Math.max(1,...ts.map(t=>s.typeN[t]));
+  out+=`<section class="ck"><h3>리소스 종류<i>${ts.length}종. 줄을 누르면 그 종류가 없는 환자와 많은 환자가 나온다</i></h3><div class="tblwrap"><table><thead><tr><th>종류</th><th></th><th class="r">개수</th><th class="r">가진 환자</th><th class="r">환자당 평균</th><th class="r">없는 환자</th></tr></thead><tbody>${ts.map(t=>{
+    const have=s.pats.filter(p=>p.types[t]).length,shared=!have;
+    const det=checkOpen.type===t?`<tr class="subrow"><td colspan="6">${shared?"<span class='dm'>환자를 가리키지 않는 공용 리소스다</span>":`<div class="ck-det"><div><h4>없는 환자 ${N-have}명</h4>${N-have?plist(s.pats.filter(p=>!p.types[t])):"<span class='dm'>없음</span>"}</div><div><h4>많은 순 15명</h4>${s.pats.filter(p=>p.types[t]).sort((a,b)=>b.types[t]-a.types[t]).slice(0,15).map(p=>`<div class="ck-li">${pbtn(p)}<span>${p.types[t]}</span></div>`).join("")}</div></div>`}</td></tr>`:"";
+    return `<tr class="ck-row" data-ctype="${esc(t)}"><td>${esc(T[t]||"")}</td><td class="k">${esc(t)}</td><td class="r db" ${pct(s.typeN[t],mxN)}>${s.typeN[t].toLocaleString()}</td>${shared?`<td class="r dm" colspan="3">공용 리소스</td>`:`<td class="r db" ${pct(have,N)}>${have} / ${N}</td><td class="r">${(s.typeN[t]/N).toFixed(1)}</td><td class="r ${N-have?"wn":""}">${N-have}</td>`}</tr>${det}`}).join("")}</tbody></table></div></section>`;
+  // 코드
+  const all=[];for(const[sys,m]of s.codes)for(const[code,c]of m)all.push([sys,code,c]);
+  if(q){
+    const hit=all.filter(([sys,code,c])=>has(`${code} ${c.d} ${sysName(sys)}`)).sort((a,b)=>b[2].pats.size-a[2].pats.size||b[2].n-a[2].n);
+    out+=`<section class="ck"><h3>검색어에 맞는 코드<i>${hit.length}개${hit.length>100?", 환자 많은 순 100개만":""}</i></h3><div class="tblwrap"><table><thead><tr><th>체계</th><th>코드</th><th>이름</th><th class="r">환자</th><th class="r">횟수</th><th>쓰인 곳</th></tr></thead><tbody>${codeRows(hit.slice(0,100),N,true)}</tbody></table></div></section>`;
+  }else{
+    const sys=[...s.codes].map(([u,m])=>{const cs=[...m.values()];return{u,n:cs.reduce((a,c)=>a+c.n,0),uq:m.size,tp:[...new Set(cs.flatMap(c=>[...c.types]))]}}).sort((a,b)=>b.n-a.n);
+    const mx=Math.max(1,...sys.map(x=>x.n));
+    out+=`<section class="ck"><h3>코드 체계<i>${sys.length}개. 줄을 누르면 환자 많은 순 코드 50개가 나온다. 위 검색 칸에 검사 이름을 넣으면 모든 체계에서 찾는다</i></h3><div class="tblwrap"><table><thead><tr><th>체계</th><th class="r">쓰인 횟수</th><th class="r">코드 종류</th><th>쓰인 리소스</th></tr></thead><tbody>${sys.map(x=>`<tr class="ck-row" data-csys="${esc(x.u)}"><td title="${esc(x.u)}">${esc(sysName(x.u))}</td><td class="r db" ${pct(x.n,mx)}>${x.n.toLocaleString()}</td><td class="r">${x.uq.toLocaleString()}</td><td class="dm nm">${esc(x.tp.map(t=>T[t]||t).join(", "))}</td></tr>${checkOpen.sys===x.u?`<tr class="subrow"><td colspan="4"><table><thead><tr><th>코드</th><th>이름</th><th class="r">환자</th><th class="r">횟수</th><th>쓰인 곳</th></tr></thead><tbody>${codeRows([...s.codes.get(x.u)].map(([k,c])=>[x.u,k,c]).sort((a,b)=>b[2].pats.size-a[2].pats.size||b[2].n-a[2].n).slice(0,50),N,false)}</tbody></table></td></tr>`:""}`).join("")}</tbody></table></div></section>`;
+  }
+  // 필수 필드
+  const miss=Object.entries(s.miss).sort((a,b)=>b[1]-a[1]);
+  out+=`<section class="ck" id="ck-miss"><h3>필수 필드 빠짐<i>FHIR R4 기본 규칙과 US Core 일부만 본다</i></h3>${miss.length?`<div class="tblwrap"><table><thead><tr><th>리소스</th><th>필드</th><th>규칙</th><th class="r">빠진 개수</th></tr></thead><tbody>${miss.map(([k,n])=>{const[t,f,src]=k.split("|");return `<tr><td>${esc(T[t]||"")} <span class="k">${esc(t)}</span></td><td><code>${esc(f)}</code></td><td class="dm">${src}</td><td class="r wn">${n.toLocaleString()}</td></tr>`}).join("")}</tbody></table></div>`:"<p>빠진 필수 필드가 없다.</p>"}</section>`;
+  // 환자
+  const ps=s.pats.filter(p=>has(p.name)),mxE=ps.reduce((m,p)=>Math.max(m,p.enc),1),mxR=ps.reduce((m,p)=>Math.max(m,p.total),1);
+  out+=`<section class="ck"><h3>환자<i>${ps.length}명. 줄을 누르면 환자 보기로 간다</i></h3><div class="tblwrap"><table><thead><tr><th>이름</th><th>성별</th><th class="r">나이</th><th class="r">방문</th><th class="r">리소스</th><th class="r">깨진 참조</th></tr></thead><tbody>${ps.map(p=>`<tr class="ck-row" data-open="${p.file}" data-pid="${esc(p.pid)}"><td>${esc(p.name)}</td><td>${p.gender==="male"?"남":p.gender==="female"?"여":esc(p.gender||"")}</td><td class="r">${ageOf(p)}${p.dead?" 사망":""}</td><td class="r db" ${pct(p.enc,mxE)}>${p.enc}</td><td class="r db" ${pct(p.total,mxR)}>${p.total.toLocaleString()}</td><td class="r ${p.broken?"wn":""}">${p.broken}</td></tr>`).join("")}</tbody></table></div></section>`;
+  // 참조와 읽지 못한 파일
+  out+=`<section class="ck" id="ck-ref"><h3>참조</h3><p>같은 파일 안에서 찾지 못한 참조가 ${s.broken.length.toLocaleString()}개다. <code>Organization?identifier=…</code> 같은 조건부 참조 ${s.cond.toLocaleString()}개는 서버가 저장할 때 찾는 참조라 깨진 것으로 세지 않았다. 외부 주소 참조는 ${s.ext.toLocaleString()}개다.</p>${s.broken.length?`<div class="tblwrap"><table><thead><tr><th>파일</th><th>리소스</th><th>참조</th></tr></thead><tbody>${s.broken.slice(0,100).map(x=>`<tr><td>${esc(fileLabel(files[x.file].name))}</td><td>${esc(x.type)}</td><td class="k">${esc(x.ref)}</td></tr>`).join("")}</tbody></table></div>`:""}${s.noPat.length?`<h3 id="ck-nopat">환자 없는 Bundle<i>Synthea는 병원과 의료진 정보를 따로 파일로 낸다. 이런 파일이 여기 잡힌다</i></h3><div class="tblwrap"><table><thead><tr><th>파일</th><th class="r">리소스</th><th>종류</th></tr></thead><tbody>${s.noPat.map(([i,n,c])=>`<tr class="ck-row" data-file="${i}"><td>${esc(files[i].name)}</td><td class="r">${n.toLocaleString()}</td><td class="dm nm" title="${esc(c)}">${esc(c)}</td></tr>`).join("")}</tbody></table></div>`:""}${s.bad.length?`<h3 id="ck-bad">읽지 못한 파일</h3><div class="tblwrap"><table><tbody>${s.bad.map(([i,m])=>`<tr><td>${esc(files[i].name)}</td><td class="wn">${m}</td></tr>`).join("")}</tbody></table></div>`:""}</section>`;
+  fcount=q?ts.length+ps.length+all.filter(([sys,code,c])=>has(`${code} ${c.d} ${sysName(sys)}`)).length:0;
+  return out;
+}
+/* 리소스 보기. 참조를 따라가고, 들어오는 참조를 보고, 필수 필드를 점검한다 */
+// FHIR R4 기본 규칙에서 최소 1개가 필요한 필드. [x]는 valueQuantity처럼 이름 뒤가 바뀌는 필드다
+const REQ={Observation:["status","code"],Encounter:["status","class"],Condition:["subject"],Procedure:["status","subject"],MedicationRequest:["status","intent","medication[x]","subject"],MedicationAdministration:["status","medication[x]","subject","effective[x]"],Immunization:["status","vaccineCode","patient","occurrence[x]"],DiagnosticReport:["status","code"],Claim:["status","type","use","patient","created","provider","priority","insurance"],ExplanationOfBenefit:["status","type","use","patient","created","insurer","provider","outcome","insurance"],CarePlan:["status","intent","subject"],DocumentReference:["status","content"],ImagingStudy:["status","subject"],AllergyIntolerance:["patient"],Provenance:["target","recorded","agent"]};
+// US Core 프로파일이 더 요구하는 필드 중 일부만 본다
+const USCORE=[[/us-core-patient/,["identifier","name","gender"]],[/us-core-condition/,["category","code","subject"]],[/us-core-encounter/,["type","subject"]],[/us-core-(vital-signs|observation|body|blood-pressure|bmi|heart-rate|respiratory-rate|pulse-oximetry|head-circumference|pediatric|smokingstatus)/,["category","subject"]]];
+const hasField=(r,f)=>f.endsWith("[x]")?Object.keys(r).some(k=>k.startsWith(f.slice(0,-3))&&k.length>f.length-3):r[f]!=null&&!(Array.isArray(r[f])&&!r[f].length);
+function reqCheck(r){
+  const out=(REQ[r.resourceType]||[]).map(f=>[f,"R4",hasField(r,f)]),prof=(r.meta?.profile||[]).join(" ");
+  for(const[re,fs]of USCORE)if(re.test(prof))for(const f of fs)if(!out.some(o=>o[0]===f))out.push([f,"US Core",hasField(r,f)]);
+  return out;
+}
+const refsOf=r=>{const out=[];const w=(o,p)=>{if(Array.isArray(o))o.forEach((x,i)=>w(x,`${p}[${i}]`));else if(o&&typeof o==="object"){if(typeof o.reference==="string")out.push([p,o.reference,o.display]);for(const k in o)w(o[k],p?`${p}.${k}`:k)}};w(r,"");return out};
+function inbound(){
+  if(fx.inb)return fx.inb;const m=new Map();
+  for(const x of fx.all)walkRes(x.r,o=>{if(typeof o.reference==="string"){const id=rid(o.reference);if(id&&id!==x.r.id&&fx.byId.has(id)){if(!m.has(id))m.set(id,new Set());m.get(id).add(x)}}});
+  return fx.inb=m;
+}
+let resSel=null,resHist=[],focus={},obsFocus=null;
+const jump=sel=>requestAnimationFrame(()=>document.querySelector(sel)?.scrollIntoView({block:"center"}));
+let rtype=null,resOpen={};
+const SHOW=8;
+// 종류별 개수 한 줄. 예) 검사 120, 처치 20
+const typeCounts=ts=>{const c={};ts.forEach(t=>c[t]=(c[t]||0)+1);return Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([t,n])=>`${T[t]||t} ${n}`).join(", ")};
+const foldList=(key,items,total)=>{const open=resOpen[key],shown=open?items:items.slice(0,SHOW);return shown.join("")+(total>SHOW?`<button class="morebtn" data-resfold="${key}">${open?"접기":`${total.toLocaleString()}개 모두 보기`}</button>`:"")};
+function openRes(id){if(!fx?.byId.has(id))return;resOpen={};if(resSel&&resSel!==id&&menu==="res")resHist.push(resSel);resSel=id;rtype=fx.byId.get(id).resourceType;menu="res";render();$("#view").scrollTop=0;document.querySelector(".rb-i.on")?.scrollIntoView({block:"nearest"})}
+function resBrowserHtml(){
+  if(!fx)return `<div class="empty">FHIR Bundle을 열면 리소스를 고를 수 있다.</div>`;
+  const g={};fx.all.forEach(x=>(g[x.r.resourceType]??=[]).push(x));
+  const ts=Object.keys(g).sort((a,b)=>rank(a)-rank(b)||a.localeCompare(b));
+  if(!resSel||!fx.byId.has(resSel))resSel=fx.patient?.id||fx.all[0]?.r.id;
+  if(!rtype||!g[rtype])rtype=fx.byId.get(resSel)?.resourceType||ts[0];
+  const xs=g[rtype].filter(fm).sort((a,b)=>when(b.r).localeCompare(when(a.r)));fcount=xs.length;
+  return `<div class="rb"><aside class="rb-types" aria-label="리소스 종류">${ts.map(t=>`<button class="rt ${t===rtype?"on":""}" data-rtype="${esc(t)}" aria-pressed="${t===rtype}" title="${esc(T[t]?`${T[t]} (${t})`:t)}"><b>${esc(T[t]||t)}</b>${T[t]?`<span class="k">${esc(t)}</span>`:""}<i>${g[t].length.toLocaleString()}</i></button>`).join("")}</aside><aside class="rb-list"><div class="rb-items">${xs.slice(0,500).map(x=>`<button class="rb-i ${x.r.id===resSel?"on":""}" data-ref="${esc(x.r.id)}">${day(when(x.r))?`<span class="dt">${day(when(x.r))}</span>`:""}<span class="ri-t">${esc(cut(what(x.r)||x.r.id,60))}</span>${rsub(x)?`<span class="ri-s">${esc(rsub(x))}</span>`:""}</button>`).join("")||"<p class='dm' style='padding:8px 10px'>검색어에 맞는 리소스가 없다</p>"}${xs.length>500?`<p class="more" style="padding:0 10px">앞 500개만 보인다. 검색으로 좁힌다</p>`:""}</div></aside><div class="rb-main">${resHtml()}</div></div>`;
+}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-rtype]");if(!b)return;rtype=b.dataset.rtype;resSel=fx.all.filter(x=>x.r.resourceType===rtype).sort((a,b)=>when(b.r).localeCompare(when(a.r)))[0]?.r.id;resHist=[];render()});
+/* 리소스 상세 (시안 1): 머리 → 내용 표 → 가리키는 쪽(접힘) → 필수 필드 한 줄 → 원본 JSON */
+// 필드 이름의 한글 이름표. 아래 작은 글씨로 원래 필드 이름을 함께 보여 준다
+const FL={individual:"사람",role:"역할",value:"값",system:"체계",display:"이름",start:"시작",end:"끝",status:"상태",class:"구분",type:"종류",subject:"환자",patient:"환자",participant:"참여자",period:"기간",location:"장소",serviceProvider:"기관",identifier:"식별자",code:"코드",category:"분류",effectiveDateTime:"시각",effectivePeriod:"기간",issued:"결과 시각",valueQuantity:"값",valueCodeableConcept:"값",valueString:"값",component:"세부 값",encounter:"방문",clinicalStatus:"임상 상태",verificationStatus:"확인 상태",onsetDateTime:"시작",abatementDateTime:"해소",recordedDate:"기록일",medicationCodeableConcept:"약",medicationReference:"약",authoredOn:"처방일",requester:"처방자",intent:"의도",dosageInstruction:"복용법",vaccineCode:"백신",occurrenceDateTime:"시각",performedPeriod:"시행 기간",performedDateTime:"시행 시각",reasonCode:"사유",reasonReference:"사유",result:"결과",name:"이름",gender:"성별",birthDate:"생일",deceasedDateTime:"사망 시각",address:"주소",telecom:"연락처",maritalStatus:"혼인",communication:"언어",multipleBirthBoolean:"다태아",extension:"확장",total:"금액",billablePeriod:"청구 기간",created:"작성일",provider:"제공자",insurance:"보험",item:"항목",use:"용도",priority:"우선순위",careTeam:"진료팀",diagnosis:"진단",procedure:"처치",payment:"지급",outcome:"결과",insurer:"보험사",target:"대상",recorded:"기록 시각",agent:"작성자",content:"내용",context:"맥락",date:"날짜",author:"작성자",description:"설명",series:"시리즈",started:"시작",numberOfSeries:"시리즈 수",numberOfInstances:"이미지 수",procedureCode:"처치 코드",activity:"활동",addresses:"대상 문제",suppliedItem:"물품",udiCarrier:"UDI",deviceName:"기기 이름",lotNumber:"로트 번호",serialNumber:"일련번호",manufactureDate:"제조일",expirationDate:"만료일",presentedForm:"첨부",performer:"시행자",hospitalization:"입원",resourceType:"종류",distinctIdentifier:"구별 번호",criticality:"위험도",reaction:"반응",clinicalStatus2:"",member:"구성원",supportingInfo:"보조 정보",facility:"시설",referral:"의뢰",prescription:"처방",claim:"청구",adjudication:"심사",contained:"포함 리소스",subjectReference:"환자",partOf:"상위",basedOn:"근거",note:"메모",interpretation:"해석",referenceRange:"참고 범위",bodySite:"부위",method:"방법",specimen:"검체",device:"기기",hasMember:"하위 검사",derivedFrom:"출처",focus:"대상",courseOfTherapyType:"치료 과정",lotNumber2:""};
+const SYSN=u=>SYS[u]||String(u||"").split("/").filter(Boolean).pop()||"";
+const isDT=v=>typeof v==="string"&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v);
+const fdt=v=>isDT(v)?v.slice(0,16).replace("T"," "):v;
+const mins=(a,b)=>{const m=Math.round((Date.parse(b)-Date.parse(a))/60000);return isFinite(m)&&m>=0?(m<120?`${m}분`:m<2880?`${Math.round(m/60)}시간`:`${Math.round(m/1440)}일`):""};
+// 값 하나를 사람이 읽는 모양으로 바꾼다. 참조는 누르면 그 리소스로 가는 링크
+function fval(v,depth=0){
+  if(v==null)return "";
+  if(isScalar(v))return esc(fdt(String(v)));
+  if(depth>6)return `<span class="dm">{${Object.keys(v).length}}</span>`;
+  // 배열: 10개까지 보이고, 나머지는 그 자리에서 펼친다
+  // 식별자나 연락처가 여럿이면 종류, 값, 코드와 체계 세 칸으로 줄을 맞춘다
+  const isId=x=>isObj(x)&&typeof x.value==="string"&&(x.system||x.use||x.type)&&!x.unit;
+  if(Array.isArray(v)&&v.length>1&&v.every(isId))return `<div class="idg">${v.map(x=>{const tl=x.type?.text||x.type?.coding?.[0]?.display||"",tc=x.type?.coding?.[0]?.code||"";return `<span class="idt">${esc(tl)||'<span class="dm">종류 없음</span>'}</span><b class="idv">${esc(x.value)}</b><span class="cd" title="${esc([tc,x.use,x.system].filter(Boolean).join(" "))}">${esc([tc,x.use,SYSN(x.system)].filter(Boolean).join(" "))}</span>`}).join("")}</div>`;
+  if(Array.isArray(v)){const MAX=10,h=x=>`<div class="fv">${fval(x,depth)}</div>`;
+    return v.slice(0,MAX).map(h).join("")+(v.length>MAX?`<details class="fmore"><summary>외 ${(v.length-MAX).toLocaleString()}개 모두 보기</summary>${v.slice(MAX).map(h).join("")}</details>`:"")}
+  if(typeof v.reference==="string"){const id=rid(v.reference),t=fx.byId.get(id);
+    if(t)return `<button class="ref" data-ref="${esc(id)}">${esc(T[t.resourceType]||t.resourceType)}: ${esc(cut(what(t)||t.id,60))}</button>`;
+    const cond=v.reference.includes("?");return `<span class="${cond?"cond":"wn"}" title="${esc(v.reference)}">${esc(v.display||cut(v.reference,60))}<em>${cond?"조건부 참조":"찾지 못함"}</em></span>`}
+  // CodeableConcept: 코드가 여러 개면 모두 보인다
+  if(Array.isArray(v.coding)||(typeof v.text==="string"&&Object.keys(v).length<=2)){const cs=v.coding||[],main=v.text||cs.find(c=>c.display)?.display||cs[0]?.code||"";
+    return `${esc(main)}${cs.length?`<span class="cd">${cs.map(c=>`${esc(SYSN(c.system))} ${esc(c.code??"")}${c.display&&c.display!==main?` (${esc(c.display)})`:""}`).join(", ")}</span>`:""}`}
+  if(typeof v.value==="number"&&(v.unit||v.code||v.currency||v.system))return `<b class="qv">${esc(String(Math.round(v.value*100)/100))}</b> ${esc(v.unit||v.currency||v.code||"")}`;
+  if(v.system&&v.code!=null&&typeof v.code!=="object")return `${esc(v.display||(/ActCode/.test(v.system)&&CLS[v.code])||"")}<span class="cd">${esc(SYSN(v.system))} ${esc(v.code)}</span>`;
+  // 식별자와 연락처: 종류(type) 이름, 값, 코드와 쓰임과 체계. 종류를 버리면 MRN과 여권 번호를 구별할 수 없다
+  if(typeof v.value==="string"&&(v.system||v.use||v.type)&&!v.unit){const tl=v.type?.text||v.type?.coding?.[0]?.display||"",tc=v.type?.coding?.[0]?.code||"";
+    return `<span class="idrow">${tl?`<span class="idt">${esc(tl)}</span>`:""}<b class="idv">${esc(v.value)}</b><span class="cd" title="${esc(v.system||"")}">${esc([tc,v.use,SYSN(v.system)].filter(Boolean).join(" "))}</span></span>`}
+  if((v.start||v.end)&&Object.keys(v).every(k=>k==="start"||k==="end")){const d=v.start&&v.end?mins(v.start,v.end):"";return `${esc(fdt(v.start||""))} ~ ${esc(fdt(v.end||""))}${d?` <span class="dm">(${d})</span>`:""}`}
+  if(v.family||v.given)return esc(v.text||[...(v.prefix||[]),...(v.given||[]),v.family].filter(Boolean).join(" "));
+  if(v.city||v.line)return esc([...(v.line||[]),v.city,v.state,v.postalCode,v.country].filter(Boolean).join(", "));
+  // 확장: 주소 끝 이름과 값. 하위 확장이 있으면 그 아래에 이어서
+  if(typeof v.url==="string"&&Object.keys(v).some(k=>k.startsWith("value")||k==="extension")){const k=Object.keys(v).find(k=>k.startsWith("value"));
+    return `<span class="dm">${esc(v.url.split("/").pop())}</span> ${k?fval(v[k],depth+1):fval(v.extension,depth+1)}`}
+  // 코드와 값만 있는 묶음(Observation.component 등): 「이름 값 코드」 한 줄
+  {const ks=Object.keys(v),vk=ks.find(k=>k.startsWith("value"));
+   if(v.code&&vk&&ks.every(k=>k==="code"||k===vk||k==="interpretation")){const c=v.code.coding?.[0];return `${esc(v.code.text||c?.display||c?.code||"")} ${fval(v[vk],depth+1)}${c?.code?`<span class="cd">${esc(SYSN(c.system))} ${esc(c.code)}</span>`:""}`}}
+  // 그 밖의 묶음(BackboneElement): 칸 안에 작은 「항목: 값」 표. 세 단계보다 깊으면 접어 둔다
+  return depth>=3?`<details class="fmore"><summary>{${Object.keys(v).length}} 펼치기</summary>${subTable(v,depth+1)}</details>`:subTable(v,depth+1);
+}
+const subTable=(v,depth)=>`<div class="kvt kin">${Object.entries(v).filter(([k])=>k!=="id").map(([k,x])=>`<div class="kvk"><span class="kk">${esc(k)}</span>${FL[k]?`<small>${esc(FL[k])}</small>`:""}</div><div class="kvv">${fval(x,depth)||'<span class="dm">비어 있음</span>'}</div>`).join("")}</div>`;
+const SKIP=new Set(["resourceType","id","meta","text"]);
+function contentHtml(r){
+  const rows=Object.entries(r).filter(([k])=>!SKIP.has(k));
+  return `<div class="kvt">${rows.map(([k,v])=>`<div class="kvk"><span class="kk">${esc(k)}</span>${FL[k]?`<small>${esc(FL[k])}</small>`:""}</div><div class="kvv">${fval(v)||'<span class="dm">비어 있음</span>'}</div>`).join("")}</div>`;
+}
+let rawOpen=true;
+function resHtml(){
+  if(!resSel||!fx.byId.has(resSel))resSel=fx.patient?.id||fx.all[0]?.r.id;
+  const r=fx.byId.get(resSel);if(!r)return `<div class="empty">리소스가 없다.</div>`;
+  const x=fx.all.find(x=>x.r===r),t=r.resourceType,chk=reqCheck(r),miss=chk.filter(c=>!c[2]);
+  const inb=[...(inbound().get(r.id)||[])].sort((a,b)=>rank(a.r.resourceType)-rank(b.r.resourceType)||when(b.r).localeCompare(when(a.r)));
+  const prof=(r.meta?.profile||[]).map(p=>p.split("/").pop());
+  const st=r.status,cls=r.class?.code,w=when(r);
+  const head=`<div class="dh">${resHist.length?`<button class="btn" data-resback>뒤로</button>`:""}<span class="ty">${esc(T[t]||"")} ${esc(t)}</span>${st?`<span class="hc">${esc(st)}</span>`:""}${cls?`<span class="hc">${esc(CLS[cls]||cls)} ${esc(cls)}</span>`:""}${w?`<span class="dm">${esc(r.period?.start?`${fdt(r.period.start)} ~ ${fdt(r.period.end||"").slice(11)}`:fdt(w))}</span>`:""}${prof.map(p=>`<span class="hc mono" title="${esc(p)}">${esc(p)}</span>`).join("")}<h2>${esc(what(r)||r.id||t)}${t==="Observation"&&extra(r)&&extra(r).length<=30?`<span class="hv">${esc(extra(r))}</span>`:""}</h2><span class="dm mono">${esc(r.id||"")}</span></div>`;
+  const inbH=inb.length?`<div class="sec"><button class="fold" data-resfold="in" aria-expanded="${!!resOpen.in}"><b>이 리소스를 가리키는 것 ${inb.length.toLocaleString()}개</b><span>${esc(typeCounts(inb.map(y=>y.r.resourceType)))}</span><span class="ar">${resOpen.in?"▾ 접기":"▸ 펼치기"}</span></button>${resOpen.in?`<div class="inb">${inb.slice(0,500).map(y=>`<div class="rs-r"><span class="lb">${esc(T[y.r.resourceType]||y.r.resourceType)}</span><button class="pl" data-ref="${esc(y.r.id)}">${esc(cut(what(y.r)||y.r.id,64))}</button><span class="dt">${day(when(y.r))}</span></div>`).join("")}${inb.length>500?`<p class="more">앞 500개만 보인다</p>`:""}</div>`:""}</div>`:"";
+  const chkH=!chk.length?"":miss.length?`<div class="sec missbox"><b>필수 필드 ${miss.length}개가 빠졌다</b><ul>${miss.map(([f,src])=>`<li><code>${esc(f)}</code> <span class="dm">${src}</span></li>`).join("")}</ul></div>`:`<div class="sec okline">● 필수 필드 ${chk.length}개 모두 있음 <span class="dm">(FHIR R4 기본 규칙과 US Core 일부)</span></div>`;
+  return `<div class="rs">${head}<div class="sec"><h3>내용<i>필드 ${Object.keys(r).filter(k=>!SKIP.has(k)).length}개</i></h3>${contentHtml(r)}</div>${inbH}${chkH}
+    <div class="sec"><button class="fold" data-rawfold aria-expanded="${rawOpen}"><b>원본 JSON</b><span>${fmtBytes(JSON.stringify(r).length)}</span><span class="ar">${rawOpen?"▾ 접기":"▸ 펼치기"}</span></button>${rawOpen?`<div class="rawbox">${node(null,r,`$.entry[${x.i}].resource`,0,false)}</div>`:""}</div></div>`;
+}
+// 가운데 목록 둘째 줄: 방문은 구분과 기록 개수, 그 밖은 값이나 상태
+function rsub(x){
+  const r=x.r;
+  if(r.resourceType==="Encounter"){const e=fx.enc.find(e=>e.r===r);const n={};(e?.kids||[]).forEach(k=>{if(!ADMIN.has(k.r.resourceType))n[k.r.resourceType]=(n[k.r.resourceType]||0)+1});
+    return [CLS[r.class?.code]||r.class?.code,Object.keys(n).sort((a,b)=>rank(a)-rank(b)).slice(0,3).map(t=>`${T[t]||t} ${n[t]}`).join(" ")].filter(Boolean).join(", ")}
+  return cut(extra(r)||r.status||"",60);
+}
+const VIEWS=[["text","원문","줄 번호가 있는 정리된 JSON"],["tree","트리","접히는 트리"],["table","표","같은 모양의 묶음은 표로"],["paths","경로","모든 값을 경로와 함께 한 줄씩"]];
+const FHIRV=[["check","점검","품질 담당. 파일 전체의 리소스 개수, 코드, 참조, 필수 필드"],["res","리소스","연동 개발자. 참조 따라가기와 필수 필드"],["pt","환자","의료진, 기획자. 요약, 방문 타임라인, 검사 추이"]];
+const FHIR_MENUS=FHIRV.map(v=>v[0]);
+function viewNum(k){return k==="check"?`${scan.pats.length}명`:k==="res"&&fx?`${fx.all.length}개`:""}
+function renderViews(){
+  const b=([k,l,t])=>`<button class="vl ${menu===k?"on":""}" data-view="${k}" title="${esc(t)}" aria-pressed="${menu===k}">${l}${scan&&viewNum(k)?`<i>${esc(viewNum(k))}</i>`:""}</button>`;
+  $("#views").innerHTML=`<span class="seg">${VIEWS.map(b).join("")}</span>`+(scan?`<span class="vgrp"><span>FHIR</span><span class="seg">${FHIRV.map(b).join("")}</span></span>`:"");
+}
+$("#views").addEventListener("click",e=>{const b=e.target.closest("[data-view]");if(!b)return;menu=b.dataset.view;render();$("#view").scrollTop=0});
+// 환자(FHIR) 또는 파일 목록. 이름 검색 칸이 있는 목록으로 고른다
+// 환자를 고르는 화면(환자, 리소스)에서만 환자 목록, 나머지 화면은 파일 목록
+const patMode=()=>!!scan&&(menu==="pt"||menu==="res");
+const ctxItems=()=>patMode()?[...scan.pats.map(p=>({key:`${p.file}|${p.pid}`,label:p.name,sub:`${p.gender==="male"?"남":p.gender==="female"?"여":""} ${ageOf(p)}세${p.dead?" 사망":""}, 방문 ${p.enc}회`})),...scan.noPat.map(([i,n])=>({key:`${i}|`,label:`(환자 없음) ${fileLabel(files[i].name)}`,sub:`리소스 ${n.toLocaleString()}개`}))]
+  :files.map((f,i)=>({key:`${i}|`,label:f.name,sub:fmtBytes(f.size)}));
+const curKey=()=>patMode()?`${cur}|${fx?.patients.length?(fx.pid||fx.patient?.id):""}`:`${cur}|`;
+let pqv="";
+function plistItems(){const k=curKey(),ql=pqv.toLowerCase();return ctxItems().filter(x=>!ql||x.label.toLowerCase().includes(ql)).map(x=>`<button class="pi ${x.key===k?"on":""}" data-pick="${esc(x.key)}" title="${esc(x.label)}"><b>${esc(x.label)}</b><span>${esc(x.sub)}</span></button>`).join("")||"<p class='dm'>맞는 이름이 없다</p>"}
+const plistHtml=()=>`<div class="pls"><input type="search" class="pq" placeholder="${patMode()?"환자 이름으로 찾기":"파일 이름으로 찾기"}" value="${esc(pqv)}" aria-label="목록에서 찾기"><div class="pitems">${plistItems()}</div></div>`;
+function renderCtx(){
+  const it=ctxItems(),k=curKey(),j=it.findIndex(x=>x.key===k);
+  $("#pickLabel").textContent=patMode()?"환자":"파일";$("#curName").textContent=j>=0?it[j].label:"";
+  $("#fpos").textContent=j>=0?`${j+1} / ${it.length}`:"";
+  if(!$("#pdrop").hidden)$("#pdrop").innerHTML=plistHtml();
+}
+const ctxStep=d=>{const it=ctxItems();if(!it.length)return;const j=it.findIndex(x=>x.key===curKey());const[i,pid]=it[(j+d+it.length)%it.length].key.split("|");openPatient(+i,pid||null,true)};
+const togglePdrop=open=>{const p=$("#pdrop");p.hidden=!open;$("#pickBtn").setAttribute("aria-expanded",open);if(open){p.innerHTML=plistHtml();p.querySelector(".pq").focus();p.querySelector(".pi.on")?.scrollIntoView({block:"nearest"})}};
+$("#pickBtn").onclick=()=>togglePdrop($("#pdrop").hidden);
+document.addEventListener("click",e=>{const b=e.target.closest("[data-pick]");if(!b)return;const[i,pid]=b.dataset.pick.split("|");togglePdrop(false);openPatient(+i,pid||null,true)});
+document.addEventListener("input",e=>{if(!e.target.matches(".pq"))return;pqv=e.target.value;document.querySelectorAll(".pitems").forEach(el=>el.innerHTML=plistItems())});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#pdrop").hidden)togglePdrop(false)});
+const scanMeta=()=>[`파일 ${files.length}개`,fmtBytes(scan.bytes),`환자 ${scan.pats.length}명`,`리소스 ${scan.total.toLocaleString()}개`];
+let loaded=-1;
+function openPatient(i,pid,keepMenu){
+  const go=()=>{if(fx&&fx.patients.length>1&&pid&&fx.pid!==pid)fx=indexBundle(data,pid);if(!keepMenu){menu="pt";mode="tl"}renderCtx();render()};
+  if(loaded===i&&data!==undefined){go();return Promise.resolve()}
+  return openAt(i)?.then(go);
+}
+// 왼쪽 목록이 쓸모 있는 곳: FHIR에서 환자 한 명을 골라 보는 화면
+const sideOn=()=>patMode()&&ctxItems().length>1;
+function renderSide(){
+  const it=ctxItems(),el=$("#side");el.hidden=!sideOn();if(el.hidden)return;
+  const k=curKey()+"|"+it.length+"|"+patMode();
+  if(el.dataset.k===k)return;  // 같은 목록이면 다시 그리지 않아 스크롤과 검색어가 그대로다
+  if(el.dataset.n===String(it.length)+patMode()&&el.querySelector(".pitems")){el.querySelectorAll(".pi").forEach(b=>b.classList.toggle("on",b.dataset.pick===curKey()));el.dataset.k=k;return}
+  el.dataset.k=k;el.dataset.n=String(it.length)+patMode();
+  el.innerHTML=`<div class="side-h"><b>${patMode()?"환자":"파일"}</b><span>${it.length.toLocaleString()}${scan?"개":"개"}</span></div>${plistHtml()}`;
+  el.querySelector(".pi.on")?.scrollIntoView({block:"nearest"});
+}
+function ptView(){
+  const body=fx?ptHtml()+tabsHtml()+(mode==="obs"?obsHtml():mode==="type"?typesHtml():tlHtml()):`<div class="empty">이 파일에는 환자가 없다. 왼쪽 목록에서 다른 환자를 고른다.</div>`;
+  return body;
+}
+let isEx=false;
+const exNote=()=>isEx?`<p class="exnote">예시 데이터를 보고 있다. 내 파일은 위 「파일 열기」로 연다.</p>`:"";
+const welcomeHtml=()=>`<div class="home"><div class="home-l">
+  <span class="logo big" aria-hidden="true">{ }</span>
+  <h2>JSON을 정리된 모양으로 본다</h2>
+  <p>트리, 표, 경로로 바꿔 보고, FHIR Bundle이면 환자와 리소스 단위로 묶어서 보여 준다. 파일은 이 브라우저 밖으로 나가지 않는다.</p>
+  <div class="home-row"><label class="btn pri lg">파일 열기<input type="file" multiple hidden data-open-file accept=".json,.jsonl,.ndjson,.txt,application/json"></label><button class="btn lg" data-example="json">예시로 보기</button></div>
+  <div class="home-hint"><span>파일을 이 창에 끌어다 놓아도 된다. 여러 파일을 한 번에 열 수 있다.</span><span><kbd>⌘</kbd> <kbd>V</kbd> 로 붙여 넣어도 된다. 윈도우는 <kbd>Ctrl</kbd> <kbd>V</kbd>.</span></div>
+</div><div class="home-r">
+  <div class="vc"><b>트리</b><span>접고 펼치며 본다</span><pre>▾ <span class="k">totals</span> {11}
+    <span class="k">sessions</span> : <span class="v">7</span>
+    <span class="k">model_turns</span> : <span class="v">2161</span>
+  ▸ <span class="k">sessions</span> [7]</pre></div>
+  <div class="vc"><b>표</b><span>같은 모양의 묶음은 표로</span><pre><span class="k">title</span>          <span class="k">turns</span>
+문서 작업        <span class="v">696</span>
+아이디어 정리    <span class="v">569</span>
+설계 검토        <span class="v"> 77</span></pre></div>
+  <div class="vc"><b>원문</b><span>줄 번호가 있는 정리된 JSON</span><pre>1  {
+2    <span class="k">"schema"</span>: <span class="s">"agent-log/v1"</span>,
+3    <span class="k">"sessions"</span>: [ … ]</pre></div>
+  <div class="vc"><b>경로</b><span>모든 값을 경로와 함께</span><pre><span class="k">$.totals.sessions</span>     <span class="v">7</span>
+<span class="k">$.sessions[0].title</span>   <span class="s">"…"</span>
+<span class="k">$.sessions[0].turns</span>   <span class="v">696</span></pre></div>
+  <div class="vc fhir"><span class="t">FHIR Bundle을 열면 더 생긴다</span><div class="mini"><div><b>점검</b>파일 전체의 개수, 코드, 참조</div><div><b>리소스</b>참조 따라가기, 필수 필드</div><div><b>환자</b>요약, 방문 타임라인, 검사 추이</div></div><button class="exlink" data-example="fhir">예시 환자 기록으로 열어 보기</button></div>
+</div></div>`;
+document.addEventListener("change",e=>{if(!e.target.matches("[data-open-file]"))return;const l=[...e.target.files];e.target.value="";openFiles(l)});
+document.addEventListener("click",e=>{const b=e.target.closest("[data-example]");if(!b)return;const fh=b.dataset.example==="fhir";if(fh)menu="pt";openFiles([new File([JSON.stringify(fh?EXAMPLE_FHIR:EXAMPLE)],fh?"예시_FHIR_환자기록.json":"예시_일반.json")])});
+function render(){
+  const view=$("#view");reg=[];lazy.length=0;fcount=0;
+  if(!scan&&FHIR_MENUS.includes(menu))menu="table";
+  renderViews();renderCtx();renderSide();
+  $("#ctx").hidden=ctxItems().length<2||menu==="check";$("#ctx").classList.toggle("with-side",sideOn());$("#pdrop").classList.toggle("with-side",sideOn());
+  $("#tools").hidden=!["tree","table","pt","res"].includes(menu);
+  const empty=data===undefined&&!scan;$("#views").hidden=empty;$(".find").hidden=empty;$(".sub").hidden=empty;$("#openTop").hidden=empty;
+  if(data===undefined&&!scan){$("#tools").hidden=true;$("#hits").textContent="";view.innerHTML=welcomeHtml();return}
+  useTables=menu!=="tree";
+  if(menu!=="tree"&&menu!=="table"){
+    view.innerHTML=exNote()+(menu==="text"?textHtml():menu==="paths"?pathsHtml():menu==="check"?checkHtml():menu==="res"?resBrowserHtml()
+      :ptView());
+    $("#hits").textContent=q?`${fcount}건`:"";
+    if(q&&(menu==="text"))document.querySelector(".code mark")?.scrollIntoView({block:"center"});
+    return}
+  view.innerHTML=exNote()+node(null,data,"$",0,false);
+  const hits=view.querySelectorAll(".hit");
+  $("#hits").textContent=q?`${hits.length}건`:"";
+  // 찾은 줄이 보이도록 조상을 연다
+  hits.forEach(h=>{for(let p=h.parentElement;p&&p!==view;p=p.parentElement)if(p.classList.contains("c"))p.classList.add("open")});
+  if(q&&hits[0])hits[0].scrollIntoView({block:"nearest"});
+}
+// 원문: 정리한 JSON에 색과 줄 번호를 붙인다. 검색어는 <mark>로 표시한다
+const markQ=t=>{const e=esc(t);if(!q)return e;const qe=esc(q).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");return e.replace(new RegExp(qe,"gi"),m=>(fcount++,`<mark>${m}</mark>`))};
+function textHtml(){
+  let t=JSON.stringify(data,null,2);const MAX=20000;let cutAt=-1;
+  for(let k=0,pos=0;k<MAX;k++){pos=t.indexOf("\n",pos)+1;if(!pos){cutAt=-1;break}cutAt=pos}
+  const cutN=cutAt>0&&cutAt<t.length;if(cutN)t=t.slice(0,cutAt-1);
+  const re=/("(?:\\.|[^"\\])*")(\s*:)?|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|\b(true|false)\b|\b(null)\b/g;
+  let out="",last=0,m;
+  while((m=re.exec(t))){out+=markQ(t.slice(last,m.index));
+    out+=m[1]?(m[2]?`<span class="k">${markQ(m[1])}</span>${m[2]}`:`<span class="s">${markQ(m[1])}</span>`):m[3]?`<span class="v">${markQ(m[3])}</span>`:m[4]?`<span class="b">${markQ(m[4])}</span>`:`<span class="z">null</span>`;
+    last=re.lastIndex}
+  out+=markQ(t.slice(last));
+  const n=t.split("\n").length;
+  return `${cutN?`<p class="more">앞 ${MAX.toLocaleString()}줄만 보인다. 나머지는 트리나 경로로 본다</p>`:""}<div class="code"><pre class="ln-no">${Array.from({length:n},(_,i)=>i+1).join("\n")}</pre><pre>${out}</pre></div>`;
+}
+// 경로: 값마다 한 줄. 줄을 누르면 경로를 복사한다
+function pathsHtml(){
+  const rows=[],MAX=3000,ql=q.toLowerCase();let total=0;
+  const walk=(v,p)=>{
+    if(!q&&rows.length>=MAX){total=-1;return}
+    if(isScalar(v)||(typeof v==="object"&&!Object.keys(v).length)){if(total>=0)total++;
+      const sv=isScalar(v)?String(v):JSON.stringify(v);
+      if(!q||p.toLowerCase().includes(ql)||sv.toLowerCase().includes(ql)){fcount++;if(rows.length<MAX)rows.push([p,v])}
+      return}
+    for(const k in v){walk(v[k],childPath(p,k,Array.isArray(v)));if(total<0)return}
+  };walk(data,"$");
+  return `<p class="more">${total<0?`앞 ${MAX.toLocaleString()}개만 보인다. 검색으로 좁힌다`:`값 ${total.toLocaleString()}개${q?`, 검색어에 맞는 것 ${fcount.toLocaleString()}개`:""}${q&&rows.length<fcount?`. 앞 ${MAX.toLocaleString()}개만 보인다`:""}`}. 줄을 누르면 경로를 복사한다</p><div class="pv">${rows.map(([p,v])=>`<button data-cp="${esc(p)}"><span class="pk">${markQ(p)}</span><span class="pval">${isScalar(v)?scalarHtml(v):`<span class="p">${Array.isArray(v)?"[]":"{}"}</span>`}</span></button>`).join("")}</div>`;
+}
+function setMeta(parts){$("#meta").innerHTML=parts.filter(Boolean).map(p=>`<span>${p}</span>`).join("")}
+// JSON 오류 위치를 줄과 글자 번호로 바꿔 한국어로 알린다
+function showParseError(text,name,e){
+  const m=String(e.message),lc=m.match(/line (\d+) column (\d+)/),pos=m.match(/position (\d+)/);
+  let where="";
+  if(lc)where=`${lc[1]}번째 줄 ${lc[2]}번째 글자 근처`;
+  else if(pos){const before=text.slice(0,+pos[1]);const ln=before.split("\n").length;where=`${ln}번째 줄 ${+pos[1]-before.lastIndexOf("\n")}번째 글자 근처`}
+  const end=/end of (JSON )?input|Unterminated/i.test(m);
+  data=undefined;fx=null;isEx=false;render();
+  setMeta([esc(name||"붙여넣기"),"읽지 못했다"]);
+  $("#views").hidden=true;
+  $("#view").innerHTML=`<div class="err"><b>「${esc(name||"붙여넣은 내용")}」을 JSON으로 읽지 못했다.</b><p>${end?"파일이 중간에 끊긴 것 같다. 끝부분의 괄호가 닫혔는지 확인한다.":`${where||"어딘가"}에서 문법이 맞지 않는다. 따옴표, 쉼표, 괄호 짝을 확인한다.`}</p><p class="dm">브라우저가 알려 준 원문: ${esc(m)}</p></div>${welcomeHtml()}`;
+}
+function load(text,name,isExample,pre){
+  let v=pre;
+  if(v===undefined){text=text.trim();if(!text)return;
+  try{v=JSON.parse(text)}
+  catch(e){
+    const lines=text.split(/\r?\n/).filter(l=>l.trim());
+    try{if(lines.length<2)throw e;v=lines.map(l=>JSON.parse(l))}
+    catch(e2){showParseError(text,name,e);return}
+  }}
+  hitMemo=new WeakMap();more.clear();isEx=!!isExample||/^예시_/.test(name||"");
+  data=v;fx=isObj(v)&&v.resourceType==="Bundle"?indexBundle(v):null;mode="tl";
+  focus={};obsFocus=null;resSel=null;resHist=[];
+  const top=fx?`Bundle ${esc(v.type||"")}, 리소스 ${v.entry?.length||0}개${fx.patients.length>1?`, 환자 ${fx.patients.length}명`:""}`:Array.isArray(v)?`배열 ${v.length}개`:isObj(v)?`키 ${Object.keys(v).length}개`:"값 하나";
+  setMeta(scan?scanMeta():[isExample?`<span class="ex">예시 데이터</span>`:esc(name),fmtBytes(files[cur]?.size??text.length),`노드 ${count(v).toLocaleString()}개`,`최상위 ${top}`]);
+  render();
+}
+/* 여러 파일: 파일 객체만 들고 있다가 고를 때 읽는다 */
+let files=[];
+const fileLabel=n=>n.replace(/\.(json|jsonl|ndjson|txt)$/i,"").replace(/_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,"").replace(/_/g," ");
+let cur=0;
+const openAt=i=>{if(!files[i])return;cur=i;loaded=i;if(parsed?.i===i){const c=parsed;parsed=null;load(c.t,files[i].name,false,c.v);return Promise.resolve()}return files[i].text().then(t=>load(t,files[i].name))};
+async function openFiles(list){
+  list=[...list];
+  files=[...list].sort((a,b)=>a.name.localeCompare(b.name));if(!files.length)return;
+  scan=null;checkOpen={};loaded=-1;q="";$("#q").value="";
+  scan=await scanAll();
+  if(!scan.ok){scan=null;if(FHIR_MENUS.includes(menu))menu="table";renderCtx();openAt(0)?.then(renderCtx);return}
+  // 여러 파일이면 점검부터 보여 준다. 파일 하나면 보던 방식을 그대로 둔다
+  if(files.length>1)menu="check";mode="tl";
+  const p=scan.pats[0];await openPatient(p?p.file:0,p?.pid,true);
+}
+$("#prev").onclick=()=>ctxStep(-1);
+$("#next").onclick=()=>ctxStep(1);
+document.addEventListener("keydown",e=>{if(!scan||e.target.matches("input,textarea,select"))return;if(e.key==="[")ctxStep(-1);if(e.key==="]")ctxStep(1)});
+const pasted=t=>{
+  openFiles([new File([t],"붙여넣기.json")])};
+// 입력 칸 밖에서 JSON을 붙여 넣으면 바로 연다
+document.addEventListener("paste",e=>{if(e.target.matches?.("input,textarea,[contenteditable]"))return;const t=e.clipboardData.getData("text");if(/^\s*[\[{]/.test(t)){e.preventDefault();pasted(t)}});
+// 입력 칸을 비우면 FileList도 비므로, 먼저 배열로 복사한다
+$("#file").onchange=e=>{const l=[...e.target.files];e.target.value="";openFiles(l)};
+const drop=document.body;let dragDepth=0;
+document.addEventListener("dragenter",e=>{e.preventDefault();dragDepth++;drop.classList.add("over")});
+document.addEventListener("dragover",e=>e.preventDefault());
+document.addEventListener("dragleave",()=>{if(--dragDepth<=0){dragDepth=0;drop.classList.remove("over")}});
+document.addEventListener("drop",e=>{e.preventDefault();dragDepth=0;drop.classList.remove("over");openFiles(e.dataTransfer.files)});
+// 펼친 중첩값 안에 또 표가 있을 수 있어서 새로 생긴 버튼이 없을 때까지 반복한다
+$("#expand").onclick=()=>{let b;while((b=document.querySelectorAll("button.sub:not(.on)")).length)b.forEach(x=>toggleSub(x,true));document.querySelectorAll("#view details").forEach(d=>d.open=true);
+  for(let g=0;g<60;g++){const c=[...document.querySelectorAll("#view .n.c:not(.open)")];if(!c.length)break;if(document.querySelectorAll("#view .n").length>20000){$("#hits").textContent="노드가 많아 일부만 펼쳤다. 필요한 곳은 직접 연다";break}c.forEach(n=>{n.classList.add("open");fillKids(n)})}};
+$("#collapse").onclick=()=>{document.querySelectorAll("#view details").forEach(d=>d.open=false);document.querySelectorAll("tr.subrow").forEach(r=>r.remove());document.querySelectorAll("button.sub.on").forEach(b=>b.classList.remove("on"));document.querySelectorAll(".view>.n .n.c").forEach(n=>n.classList.remove("open"))};
+$("#pageSel").innerHTML=PAGES.map(n=>`<option value="${n}" ${n===PAGE?"selected":""}>${n.toLocaleString()}</option>`).join("");
+$("#pageSel").onchange=e=>{PAGE=+e.target.value;try{localStorage.setItem("json-page",PAGE)}catch(x){}more.clear();render()};
+let qt;$("#q").oninput=e=>{clearTimeout(qt);qt=setTimeout(()=>{q=e.target.value.trim();hitMemo=new WeakMap();more.clear();render()},250)};
+$("#view").addEventListener("click",e=>{
+  const cp=e.target.closest("[data-cp]");
+  if(cp){navigator.clipboard?.writeText(cp.dataset.cp).catch(()=>{});$("#path").innerHTML=`<b>복사함</b> ${esc(cp.dataset.cp)}`;return}
+  const sub=e.target.closest("button.sub");if(sub){toggleSub(sub);return}
+  const jp=e.target.closest("[data-jump]");if(jp){document.querySelector(jp.dataset.jump)?.scrollIntoView({block:"start",behavior:"smooth"});return}
+  const op=e.target.closest("[data-open]");if(op){openPatient(+op.dataset.open,op.dataset.pid);return}
+  const of=e.target.closest("[data-file]");if(of){menu="res";openPatient(+of.dataset.file,null,true);return}
+  const ct=e.target.closest("[data-ctype]");if(ct){checkOpen.type=checkOpen.type===ct.dataset.ctype?null:ct.dataset.ctype;render();return}
+  const cs=e.target.closest("[data-csys]");if(cs){checkOpen.sys=checkOpen.sys===cs.dataset.csys?null:cs.dataset.csys;render();return}
+  const cd=e.target.closest("[data-ccode]");if(cd){checkOpen.code=checkOpen.code===cd.dataset.ccode?null:cd.dataset.ccode;render();return}
+  const ge=e.target.closest("[data-goenc]");if(ge){focus={enc:ge.dataset.goenc,res:ge.dataset.gores};menu="pt";mode="tl";q="";$("#q").value="";render();jump(".ln.focus");return}
+  const gob=e.target.closest("[data-goobs]");if(gob){obsFocus=gob.dataset.goobs;menu="pt";mode="obs";q="";$("#q").value="";render();jump(`details[data-obs="${CSS.escape(obsFocus)}"]`);return}
+  const rf=e.target.closest("[data-ref]");if(rf){openRes(rf.dataset.ref);return}
+  if(e.target.closest("[data-rawfold]")){rawOpen=!rawOpen;render();return}
+  const rf2=e.target.closest("[data-resfold]");if(rf2){resOpen[rf2.dataset.resfold]=!resOpen[rf2.dataset.resfold];render();return}
+  if(e.target.closest("[data-resback]")){resSel=resHist.pop();render();return}
+  const md=e.target.closest("[data-mode]");if(md){mode=md.dataset.mode;render();return}
+  const ty=e.target.closest("[data-type]");if(ty){ftype=ty.dataset.type;render();return}
+  // FHIR 줄을 누르면 그 리소스 원본을 바로 아래에 펼친다
+  const ln=e.target.closest(".ln[data-raw]");
+  if(ln){const nx=ln.nextElementSibling;
+    if(nx?.classList.contains("raw")){nx.remove();ln.classList.remove("on")}
+    else{const i=+ln.dataset.raw;ln.insertAdjacentHTML("afterend",`<div class="raw"><button class="pl" data-ref="${esc(data.entry[i].resource.id)}">리소스 보기에서 열기</button>${node(null,data.entry[i].resource,`$.entry[${i}].resource`,0,false)}</div>`);ln.classList.add("on")}
+    return}
+  const mb=e.target.closest("[data-more]");if(mb){const n=mb.closest(".n.c");if(!n)return;const[v,p,d,t]=lazy[+n.dataset.lz];more.set(p,(more.get(p)||PAGE)+PAGE);n.querySelector(":scope>.kids").innerHTML=kidsHtml(v,p,d,t);return}
+  const l=e.target.closest(".n.c>.l");if(l){const n=l.parentElement;n.classList.toggle("open");if(n.classList.contains("open"))fillKids(n)}
+});
+// 행 아래 칸 하나에 중첩값 여러 개를 함께 연다
+function toggleSub(btn,force){
+  const tr=btn.closest("tr");let sr=tr.nextElementSibling;
+  if(!sr?.classList.contains("subrow")){tr.insertAdjacentHTML("afterend",`<tr class="subrow"><td colspan="${tr.children.length}"></td></tr>`);sr=tr.nextElementSibling}
+  const id=btn.dataset.sub,ex=[...sr.cells[0].children].find(d=>d.dataset.sub===id);
+  if(ex&&force!==true){ex.remove();btn.classList.remove("on");if(!sr.cells[0].children.length)sr.remove()}
+  else if(!ex){sr.cells[0].insertAdjacentHTML("beforeend",subHtml(+id));btn.classList.add("on")}
+}
+document.addEventListener("change",e=>{if(e.target.matches("[data-pat]")){fx=indexBundle(data,e.target.value);render();$("[data-pat]")?.focus()}});
+$("#view").addEventListener("mouseover",e=>{const n=e.target.closest("[data-p]");if(n)$("#path").textContent=n.dataset.p});
+/* 테마: 버튼으로 고른 값이 시스템 설정보다 우선한다 */
+const isDark=()=>{const t=document.documentElement.getAttribute("data-theme");return t?t==="dark":matchMedia("(prefers-color-scheme:dark)").matches};
+const applyTheme=t=>{const r=document.documentElement;if(t)r.setAttribute("data-theme",t);else r.removeAttribute("data-theme");$("#theme").textContent=isDark()?"밝게":"어둡게"};
+let theme=null;try{theme=localStorage.getItem("json-theme")}catch(e){}
+applyTheme(theme);
+$("#theme").onclick=()=>{theme=isDark()?"light":"dark";try{localStorage.setItem("json-theme",theme)}catch(e){}applyTheme(theme)};
+render();
+</script>
+</body>
+</html>
